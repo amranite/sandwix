@@ -32,9 +32,11 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import be.corentinvanhaeren.sandwix.R
 import be.corentinvanhaeren.sandwix.model.CustomerOrder
+import be.corentinvanhaeren.sandwix.model.sampleOrders
 import be.corentinvanhaeren.sandwix.ui.components.CheckoutLine
 import be.corentinvanhaeren.sandwix.ui.components.EmptyState
 import be.corentinvanhaeren.sandwix.ui.components.PickupCodeCard
@@ -44,6 +46,21 @@ import be.corentinvanhaeren.sandwix.ui.components.StatusPill
 import be.corentinvanhaeren.sandwix.ui.components.TotalCard
 import be.corentinvanhaeren.sandwix.ui.util.formatPrice
 import be.corentinvanhaeren.sandwix.ui.util.totalPrice
+
+@Preview(showBackground = true)
+@Composable
+private fun OrdersScreenPreview() {
+    MaterialTheme {
+        Scaffold { padding ->
+            OrdersScreen(
+                contentPadding = padding,
+                orders = sampleOrders(),
+                onOrderClick = {},
+                onHome = {}
+            )
+        }
+    }
+}
 
 @Composable
 internal fun OrdersScreen(contentPadding: PaddingValues, orders: List<CustomerOrder>, onOrderClick: (CustomerOrder) -> Unit, onHome: () -> Unit) {

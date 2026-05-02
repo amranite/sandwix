@@ -20,8 +20,20 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import be.corentinvanhaeren.sandwix.R
+
+@Preview(showBackground = true)
+@Composable
+private fun ProfileScreenPreview() {
+    MaterialTheme {
+        ProfileScreen(
+            contentPadding = PaddingValues(0.dp),
+            onLogout = {}
+        )
+    }
+}
 
 @Composable
 internal fun ProfileScreen(contentPadding: PaddingValues, onLogout: () -> Unit) {

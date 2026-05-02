@@ -35,10 +35,24 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import be.corentinvanhaeren.sandwix.R
 import be.corentinvanhaeren.sandwix.model.Sandwich
+import be.corentinvanhaeren.sandwix.model.sampleSandwiches
 import be.corentinvanhaeren.sandwix.ui.util.formatPrice
+
+@Preview(showBackground = true)
+@Composable
+private fun HomeScreenPreview() {
+    MaterialTheme {
+        HomeScreen(
+            contentPadding = PaddingValues(0.dp),
+            sandwiches = sampleSandwiches,
+            onSandwichClick = {}
+        )
+    }
+}
 
 @Composable
 internal fun HomeScreen(contentPadding: PaddingValues, sandwiches: List<Sandwich>, onSandwichClick: (Sandwich) -> Unit) {

@@ -26,10 +26,22 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import be.corentinvanhaeren.sandwix.R
 import be.corentinvanhaeren.sandwix.model.CustomerOrder
+import be.corentinvanhaeren.sandwix.model.sampleOrders
 import be.corentinvanhaeren.sandwix.ui.components.PickupCodeCard
+
+@Preview(showBackground = true)
+@Composable
+private fun ConfirmationScreenPreview() {
+    ConfirmationScreen(
+        order = sampleOrders().first(),
+        onHome = {},
+        onOrders = {}
+    )
+}
 
 @Composable
 internal fun ConfirmationScreen(order: CustomerOrder, onHome: () -> Unit, onOrders: () -> Unit) {

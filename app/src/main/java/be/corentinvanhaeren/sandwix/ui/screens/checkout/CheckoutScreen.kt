@@ -35,15 +35,47 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import be.corentinvanhaeren.sandwix.R
 import be.corentinvanhaeren.sandwix.model.CartItem
+import be.corentinvanhaeren.sandwix.model.Extra
 import be.corentinvanhaeren.sandwix.model.PickupLocation
+import be.corentinvanhaeren.sandwix.model.sampleExtras
+import be.corentinvanhaeren.sandwix.model.sampleLocations
+import be.corentinvanhaeren.sandwix.model.sampleOrders
+import be.corentinvanhaeren.sandwix.model.sampleSandwiches
 import be.corentinvanhaeren.sandwix.ui.components.CheckoutLine
 import be.corentinvanhaeren.sandwix.ui.components.SandwixTopBar
 import be.corentinvanhaeren.sandwix.ui.components.SectionTitle
 import be.corentinvanhaeren.sandwix.ui.components.TotalCard
 import be.corentinvanhaeren.sandwix.ui.util.totalPrice
+
+@Preview(showBackground = true)
+@Composable
+private fun CheckoutScreenPreview() {
+
+    val cartItems = listOf(
+        CartItem(
+            sandwich = sampleSandwiches[0],
+            quantity = 2,
+            selectedExtras = listOf<Extra>(sampleExtras[0]),
+            note = "No onions"
+        ),
+        CartItem(
+            sandwich = sampleSandwiches[2],
+            quantity = 1,
+            selectedExtras = emptyList()
+        )
+    )
+
+    CheckoutScreen(
+        cartItems = cartItems,
+        locations = sampleLocations,
+        onBack = {},
+        onConfirm = { _, _, _ -> }
+    )
+}
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable

@@ -28,15 +28,49 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import be.corentinvanhaeren.sandwix.R
 import be.corentinvanhaeren.sandwix.model.CartItem
+import be.corentinvanhaeren.sandwix.model.Extra
+import be.corentinvanhaeren.sandwix.model.sampleExtras
+import be.corentinvanhaeren.sandwix.model.sampleSandwiches
 import be.corentinvanhaeren.sandwix.ui.components.EmptyState
 import be.corentinvanhaeren.sandwix.ui.components.QuantityRow
 import be.corentinvanhaeren.sandwix.ui.components.TotalCard
 import be.corentinvanhaeren.sandwix.ui.util.formatPrice
 import be.corentinvanhaeren.sandwix.ui.util.lineTotal
 import be.corentinvanhaeren.sandwix.ui.util.totalPrice
+
+@Preview(showBackground = true)
+@Composable
+private fun CartScreenPreview() {
+
+    val cartItems = listOf(
+        CartItem(
+            sandwich = sampleSandwiches[0],
+            quantity = 2,
+            selectedExtras = listOf<Extra>(
+                sampleExtras[0],
+                sampleExtras[1]
+            ),
+            note = "No onions"
+        ),
+        CartItem(
+            sandwich = sampleSandwiches[2],
+            quantity = 1
+        )
+    )
+
+    CartScreen(
+        contentPadding = PaddingValues(0.dp),
+        cartItems = cartItems,
+        onContinueShopping = {},
+        onCheckout = {},
+        onQuantityChange = { _, _ -> },
+        onRemove = {}
+    )
+}
 
 @Composable
 internal fun CartScreen(

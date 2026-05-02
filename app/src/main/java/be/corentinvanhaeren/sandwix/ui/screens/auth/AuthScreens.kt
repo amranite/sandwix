@@ -43,14 +43,24 @@ import be.corentinvanhaeren.sandwix.R
 import be.corentinvanhaeren.sandwix.ui.components.BrandMark
 import be.corentinvanhaeren.sandwix.ui.components.SandwixTopBar
 
-@Preview(showBackground = true)
-@Composable
-private fun LoginScreenPreview() {
-    LoginScreen(
-        onLogin = {},
-        onRegister = {}
-    )
-}
+//@Preview(showBackground = true)
+//@Composable
+//private fun LoginScreenPreview() {
+//    LoginScreen(
+//        onLogin = {},
+//        onRegister = {}
+//    )
+//}
+//
+//@Preview(showBackground = true)
+//@Composable
+//private fun RegisterScreenPreview() {
+//    RegisterScreen(
+//        onBack = {},
+//        onLogin = {},
+//        onRegister = {}
+//    )
+//}
 
 @Composable
 internal fun LoginScreen(onLogin: () -> Unit, onRegister: () -> Unit) {

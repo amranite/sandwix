@@ -39,17 +39,33 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import be.corentinvanhaeren.sandwix.R
 import be.corentinvanhaeren.sandwix.model.CartItem
 import be.corentinvanhaeren.sandwix.model.Extra
 import be.corentinvanhaeren.sandwix.model.Sandwich
+import be.corentinvanhaeren.sandwix.model.sampleSandwiches
 import be.corentinvanhaeren.sandwix.ui.components.QuantityRow
 import be.corentinvanhaeren.sandwix.ui.components.SandwixTopBar
 import be.corentinvanhaeren.sandwix.ui.components.SectionTitle
 import be.corentinvanhaeren.sandwix.ui.util.formatPrice
 import be.corentinvanhaeren.sandwix.ui.util.sumOfPrice
 import java.math.BigDecimal
+
+
+//TODO some rendering problems
+//@Preview(showBackground = true)
+//@Composable
+//private fun SandwichDetailScreenPreview() {
+//    MaterialTheme {
+//        SandwichDetailScreen(
+//            sandwich = sampleSandwiches.first(),
+//            onBack = {},
+//            onAddToCart = {}
+//        )
+//    }
+//}
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
