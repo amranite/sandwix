@@ -12,13 +12,10 @@ import be.corentinvanhaeren.sandwix.ui.navigation.MainTab
 import be.corentinvanhaeren.sandwix.ui.navigation.Route
 
 @Composable
-internal fun MainShell(
+internal fun SandwixBottomBar(
     selectedTab: MainTab,
     onTabSelected: (Route) -> Unit,
-    content: @Composable (PaddingValues) -> Unit,
 ) {
-    Scaffold(
-        bottomBar = {
             NavigationBar {
                 MainTab.entries.forEach { tab ->
                     NavigationBarItem(
@@ -29,7 +26,5 @@ internal fun MainShell(
                     )
                 }
             }
-        },
-        content = content,
-    )
-}
+        }
+

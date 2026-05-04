@@ -24,6 +24,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -40,92 +41,238 @@ import androidx.compose.ui.unit.dp
 import be.corentinvanhaeren.sandwix.R
 import be.corentinvanhaeren.sandwix.model.Sandwich
 import be.corentinvanhaeren.sandwix.model.sampleSandwiches
+import be.corentinvanhaeren.sandwix.ui.components.SandwixBottomBar
+import be.corentinvanhaeren.sandwix.ui.components.SandwixTopBar
+import be.corentinvanhaeren.sandwix.ui.navigation.MainTab
+import be.corentinvanhaeren.sandwix.ui.theme.SandwixTheme
 import be.corentinvanhaeren.sandwix.ui.util.formatPrice
 
-@Preview(showBackground = true)
 @Composable
-private fun HomeScreenPreview() {
-    MaterialTheme {
-        HomeScreen(
-            contentPadding = PaddingValues(0.dp),
-            sandwiches = sampleSandwiches,
-            onSandwichClick = {}
-        )
-    }
-}
-
-@Composable
-internal fun HomeScreen(contentPadding: PaddingValues, sandwiches: List<Sandwich>, onSandwichClick: (Sandwich) -> Unit) {
+internal fun HomeScreen(
+    contentPadding: PaddingValues,
+    sandwiches: List<Sandwich>,
+    onSandwichClick: (Sandwich) -> Unit,
+) {
     var query by rememberSaveable { mutableStateOf("") }
-    val filtered = sandwiches.filter { it.name.contains(query, ignoreCase = true) || it.description.contains(query, ignoreCase = true) }
+
+    val filtered = sandwiches.filter { sandwich ->
+        sandwich.name.contains(query, ignoreCase = true) ||
+                sandwich.description.contains(query, ignoreCase = true)
+    }
 
     LazyColumn(
-        modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background),
-        contentPadding = PaddingValues(start = 20.dp, top = contentPadding.calculateTopPadding() + 24.dp, end = 20.dp, bottom = contentPadding.calculateBottomPadding() + 24.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background),
+        contentPadding = PaddingValues(
+            start = 20.dp,
+            top = contentPadding.calculateTopPadding() + 24.dp,
+            end = 20.dp,
+            bottom = contentPadding.calculateBottomPadding() + 24.dp,
+        ),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         item {
-            Text(stringResource(R.string.home_title), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-            Text(stringResource(R.string.home_subtitle), color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(
+                text = stringResource(R.string.home_title),
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+            )
+
+            Text(
+                text = stringResource(R.string.home_subtitle),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
             Spacer(Modifier.height(16.dp))
+
             OutlinedTextField(
                 value = query,
                 onValueChange = { query = it },
                 modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text(stringResource(R.string.search_placeholder)) },
-                leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
+                placeholder = {
+                    Text(stringResource(R.string.search_placeholder))
+                },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Filled.Search,
+                        contentDescription = null,
+                    )
+                },
                 singleLine = true,
                 shape = MaterialTheme.shapes.extraLarge,
             )
+
             Spacer(Modifier.height(12.dp))
+
             DeliveryNotice()
         }
-        items(filtered, key = { it.id }) { sandwich ->
-            SandwichCard(sandwich = sandwich, onClick = { onSandwichClick(sandwich) })
+
+        items(
+            items = filtered,
+            key = { sandwich -> sandwich.id },
+        ) { sandwich ->
+            SandwichCard(
+                sandwich = sandwich,
+                onClick = {
+                    onSandwichClick(sandwich)
+                },
+            )
         }
     }
 }
 
 @Composable
-
 internal fun DeliveryNotice() {
-    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer)) {
-        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Icon(Icons.Filled.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.onTertiaryContainer)
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+        ),
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Warning,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onTertiaryContainer,
+            )
+
             Column {
-                Text(stringResource(R.string.company_delivery_title), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onTertiaryContainer)
-                Text(stringResource(R.string.company_delivery_body), color = MaterialTheme.colorScheme.onTertiaryContainer)
+                Text(
+                    text = stringResource(R.string.company_delivery_title),
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onTertiaryContainer,
+                )
+
+                Text(
+                    text = stringResource(R.string.company_delivery_body),
+                    color = MaterialTheme.colorScheme.onTertiaryContainer,
+                )
             }
         }
     }
 }
 
 @Composable
-
-internal fun SandwichCard(sandwich: Sandwich, onClick: () -> Unit) {
+internal fun SandwichCard(
+    sandwich: Sandwich,
+    onClick: () -> Unit,
+) {
     Card(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface,
+        ),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
     ) {
-        Row(Modifier.padding(16.dp), horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             SandwichIcon()
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(sandwich.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                Text(sandwich.description, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(formatPrice(sandwich.price), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Text(
+                    text = sandwich.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                )
+
+                Text(
+                    text = sandwich.description,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+
+                Text(
+                    text = formatPrice(sandwich.price),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary,
+                )
             }
         }
     }
 }
 
 @Composable
-
 internal fun SandwichIcon() {
     Box(
-        modifier = Modifier.size(56.dp).clip(MaterialTheme.shapes.large).background(MaterialTheme.colorScheme.primaryContainer),
+        modifier = Modifier
+            .size(56.dp)
+            .clip(MaterialTheme.shapes.large)
+            .background(MaterialTheme.colorScheme.primaryContainer),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(Icons.AutoMirrored.Filled.MenuBook, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.MenuBook,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+        )
+    }
+}
+
+@Preview(showBackground = true, showSystemUi = true)
+@Composable
+private fun HomeScreenPreview() {
+    SandwixTheme(
+        darkTheme = false,
+    ) {
+        Scaffold(
+            topBar = {
+                SandwixTopBar(
+                    title = stringResource(R.string.nav_home),
+                )
+            },
+            bottomBar = {
+                SandwixBottomBar(
+                    selectedTab = MainTab.Home,
+                    onTabSelected = {},
+                )
+            },
+        ) { innerPadding ->
+            HomeScreen(
+                contentPadding = innerPadding,
+                sandwiches = sampleSandwiches,
+                onSandwichClick = {},
+            )
+        }
+    }
+}
+
+@Preview(showBackground = true, showSystemUi = true)
+@Composable
+private fun HomeScreenPreviewDark() {
+    SandwixTheme(
+        darkTheme = true,
+    ) {
+        Scaffold(
+            topBar = {
+                SandwixTopBar(
+                    title = stringResource(R.string.nav_home),
+                )
+            },
+            bottomBar = {
+                SandwixBottomBar(
+                    selectedTab = MainTab.Home,
+                    onTabSelected = {},
+                )
+            },
+        ) { innerPadding ->
+            HomeScreen(
+                contentPadding = innerPadding,
+                sandwiches = sampleSandwiches,
+                onSandwichClick = {},
+            )
+        }
     }
 }

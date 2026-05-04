@@ -43,106 +43,266 @@ import be.corentinvanhaeren.sandwix.model.Extra
 import be.corentinvanhaeren.sandwix.model.PickupLocation
 import be.corentinvanhaeren.sandwix.model.sampleExtras
 import be.corentinvanhaeren.sandwix.model.sampleLocations
-import be.corentinvanhaeren.sandwix.model.sampleOrders
 import be.corentinvanhaeren.sandwix.model.sampleSandwiches
 import be.corentinvanhaeren.sandwix.ui.components.CheckoutLine
 import be.corentinvanhaeren.sandwix.ui.components.SandwixTopBar
 import be.corentinvanhaeren.sandwix.ui.components.SectionTitle
 import be.corentinvanhaeren.sandwix.ui.components.TotalCard
+import be.corentinvanhaeren.sandwix.ui.theme.SandwixTheme
 import be.corentinvanhaeren.sandwix.ui.util.totalPrice
-
-@Preview(showBackground = true)
-@Composable
-private fun CheckoutScreenPreview() {
-
-    val cartItems = listOf(
-        CartItem(
-            sandwich = sampleSandwiches[0],
-            quantity = 2,
-            selectedExtras = listOf<Extra>(sampleExtras[0]),
-            note = "No onions"
-        ),
-        CartItem(
-            sandwich = sampleSandwiches[2],
-            quantity = 1,
-            selectedExtras = emptyList()
-        )
-    )
-
-    CheckoutScreen(
-        cartItems = cartItems,
-        locations = sampleLocations,
-        onBack = {},
-        onConfirm = { _, _, _ -> }
-    )
-}
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-internal fun CheckoutScreen(cartItems: List<CartItem>, locations: List<PickupLocation>, onBack: () -> Unit, onConfirm: (PickupLocation, String, String) -> Unit) {
-    var selectedLocationId by rememberSaveable { mutableStateOf(locations.firstOrNull { it.isOpen }?.id ?: locations.first().id) }
+internal fun CheckoutScreen(
+    contentPadding: PaddingValues,
+    cartItems: List<CartItem>,
+    locations: List<PickupLocation>,
+    onConfirm: (PickupLocation, String, String) -> Unit,
+) {
+    var selectedLocationId by rememberSaveable {
+        mutableStateOf(
+            locations.firstOrNull { it.isOpen }?.id ?: locations.first().id
+        )
+    }
+
     var selectedTime by rememberSaveable { mutableStateOf("12:15") }
     var note by rememberSaveable { mutableStateOf("") }
+
     val selectedLocation = locations.first { it.id == selectedLocationId }
     val times = listOf("11:45", "12:00", "12:15", "12:30", "12:45")
 
-    Scaffold(topBar = { SandwixTopBar(stringResource(R.string.checkout_title), onBack) }) { padding ->
-        LazyColumn(
-            modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background),
-            contentPadding = PaddingValues(start = 20.dp, top = padding.calculateTopPadding() + 20.dp, end = 20.dp, bottom = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            item { SectionTitle(stringResource(R.string.your_order)) }
-            items(cartItems) { cartItem -> CheckoutLine(cartItem) }
-            item { TotalCard(cartItems.totalPrice()) }
-            item {
-                SectionTitle(stringResource(R.string.choose_location))
-                locations.forEach { location ->
-                    LocationCard(location, selected = selectedLocationId == location.id, onClick = { if (location.isOpen) selectedLocationId = location.id })
-                    Spacer(Modifier.height(8.dp))
-                }
-            }
-            item {
-                SectionTitle(stringResource(R.string.choose_pickup_time))
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    times.forEach { time -> AssistChip(onClick = { selectedTime = time }, label = { Text(if (time == selectedTime) stringResource(R.string.selected_time, time) else time) }) }
-                }
-            }
-            item {
-                OutlinedTextField(
-                    value = note,
-                    onValueChange = { note = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text(stringResource(R.string.order_note_label)) },
-                    placeholder = { Text(stringResource(R.string.order_note_placeholder)) },
-                    minLines = 3,
-                    shape = MaterialTheme.shapes.large,
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background),
+        contentPadding = PaddingValues(
+            start = 20.dp,
+            top = contentPadding.calculateTopPadding() + 20.dp,
+            end = 20.dp,
+            bottom = contentPadding.calculateBottomPadding() + 24.dp,
+        ),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        item {
+            SectionTitle(stringResource(R.string.your_order))
+        }
+
+        items(cartItems) { cartItem ->
+            CheckoutLine(cartItem)
+        }
+
+        item {
+            TotalCard(cartItems.totalPrice())
+        }
+
+        item {
+            SectionTitle(stringResource(R.string.choose_location))
+
+            locations.forEach { location ->
+                LocationCard(
+                    location = location,
+                    selected = selectedLocationId == location.id,
+                    onClick = {
+                        if (location.isOpen) {
+                            selectedLocationId = location.id
+                        }
+                    },
                 )
-                Spacer(Modifier.height(16.dp))
-                Button(
-                    onClick = { onConfirm(selectedLocation, selectedTime, note) },
-                    enabled = cartItems.isNotEmpty() && selectedLocation.isOpen,
-                    modifier = Modifier.fillMaxWidth().height(54.dp),
-                ) { Text(stringResource(R.string.confirm_and_pay), fontWeight = FontWeight.Bold) }
+
+                Spacer(Modifier.height(8.dp))
+            }
+        }
+
+        item {
+            SectionTitle(stringResource(R.string.choose_pickup_time))
+
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                times.forEach { time ->
+                    AssistChip(
+                        onClick = {
+                            selectedTime = time
+                        },
+                        label = {
+                            Text(
+                                if (time == selectedTime) {
+                                    stringResource(R.string.selected_time, time)
+                                } else {
+                                    time
+                                }
+                            )
+                        },
+                    )
+                }
+            }
+        }
+
+        item {
+            OutlinedTextField(
+                value = note,
+                onValueChange = {
+                    note = it
+                },
+                modifier = Modifier.fillMaxWidth(),
+                label = {
+                    Text(stringResource(R.string.order_note_label))
+                },
+                placeholder = {
+                    Text(stringResource(R.string.order_note_placeholder))
+                },
+                minLines = 3,
+                shape = MaterialTheme.shapes.large,
+            )
+
+            Spacer(Modifier.height(16.dp))
+
+            Button(
+                onClick = {
+                    onConfirm(selectedLocation, selectedTime, note)
+                },
+                enabled = cartItems.isNotEmpty() && selectedLocation.isOpen,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(54.dp),
+            ) {
+                Text(
+                    text = stringResource(R.string.confirm_and_pay),
+                    fontWeight = FontWeight.Bold,
+                )
             }
         }
     }
 }
 
 @Composable
-
-internal fun LocationCard(location: PickupLocation, selected: Boolean, onClick: () -> Unit) {
+internal fun LocationCard(
+    location: PickupLocation,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
     Card(
-        modifier = Modifier.fillMaxWidth().clickable(enabled = location.isOpen, onClick = onClick),
-        colors = CardDefaults.cardColors(containerColor = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(
+                enabled = location.isOpen,
+                onClick = onClick,
+            ),
+        colors = CardDefaults.cardColors(
+            containerColor = if (selected) {
+                MaterialTheme.colorScheme.primaryContainer
+            } else {
+                MaterialTheme.colorScheme.surface
+            },
+        ),
     ) {
-        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Icon(Icons.Filled.LocationOn, contentDescription = null)
-            Column(Modifier.weight(1f)) {
-                Text(location.name, fontWeight = FontWeight.Bold)
-                Text(location.address, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                if (!location.isOpen) Text(stringResource(R.string.location_closed), color = MaterialTheme.colorScheme.error)
+        Row(
+            modifier = Modifier.padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Icon(
+                imageVector = Icons.Filled.LocationOn,
+                contentDescription = null,
+            )
+
+            Column(
+                modifier = Modifier.weight(1f),
+            ) {
+                Text(
+                    text = location.name,
+                    fontWeight = FontWeight.Bold,
+                )
+
+                Text(
+                    text = location.address,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+
+                if (!location.isOpen) {
+                    Text(
+                        text = stringResource(R.string.location_closed),
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
             }
+        }
+    }
+}
+
+@Preview(showBackground = true, showSystemUi = true)
+@Composable
+private fun CheckoutScreenPreview() {
+    val cartItems = listOf(
+        CartItem(
+            sandwich = sampleSandwiches[0],
+            quantity = 2,
+            selectedExtras = listOf<Extra>(sampleExtras[0]),
+            note = "No onions",
+        ),
+        CartItem(
+            sandwich = sampleSandwiches[2],
+            quantity = 1,
+            selectedExtras = emptyList(),
+        ),
+    )
+
+    SandwixTheme (
+        darkTheme = false
+    ){
+        Scaffold(
+            topBar = {
+                SandwixTopBar(
+                    title = stringResource(R.string.checkout_title),
+                    onBack = {},
+                )
+            },
+        ) { innerPadding ->
+            CheckoutScreen(
+                contentPadding = innerPadding,
+                cartItems = cartItems,
+                locations = sampleLocations,
+                onConfirm = { _, _, _ -> },
+            )
+        }
+    }
+}
+
+@Preview(showBackground = true, showSystemUi = true)
+@Composable
+private fun CheckoutScreenPreviewDark() {
+    val cartItems = listOf(
+        CartItem(
+            sandwich = sampleSandwiches[0],
+            quantity = 2,
+            selectedExtras = listOf<Extra>(sampleExtras[0]),
+            note = "No onions",
+        ),
+        CartItem(
+            sandwich = sampleSandwiches[2],
+            quantity = 1,
+            selectedExtras = emptyList(),
+        ),
+    )
+
+    SandwixTheme (
+        darkTheme = true
+    ){
+        Scaffold(
+            topBar = {
+                SandwixTopBar(
+                    title = stringResource(R.string.checkout_title),
+                    onBack = {},
+                )
+            },
+        ) { innerPadding ->
+            CheckoutScreen(
+                contentPadding = innerPadding,
+                cartItems = cartItems,
+                locations = sampleLocations,
+                onConfirm = { _, _, _ -> },
+            )
         }
     }
 }

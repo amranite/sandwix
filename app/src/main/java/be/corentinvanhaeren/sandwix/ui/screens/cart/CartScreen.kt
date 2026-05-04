@@ -22,6 +22,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -37,40 +38,14 @@ import be.corentinvanhaeren.sandwix.model.sampleExtras
 import be.corentinvanhaeren.sandwix.model.sampleSandwiches
 import be.corentinvanhaeren.sandwix.ui.components.EmptyState
 import be.corentinvanhaeren.sandwix.ui.components.QuantityRow
+import be.corentinvanhaeren.sandwix.ui.components.SandwixBottomBar
+import be.corentinvanhaeren.sandwix.ui.components.SandwixTopBar
 import be.corentinvanhaeren.sandwix.ui.components.TotalCard
+import be.corentinvanhaeren.sandwix.ui.navigation.MainTab
+import be.corentinvanhaeren.sandwix.ui.theme.SandwixTheme
 import be.corentinvanhaeren.sandwix.ui.util.formatPrice
 import be.corentinvanhaeren.sandwix.ui.util.lineTotal
 import be.corentinvanhaeren.sandwix.ui.util.totalPrice
-
-@Preview(showBackground = true)
-@Composable
-private fun CartScreenPreview() {
-
-    val cartItems = listOf(
-        CartItem(
-            sandwich = sampleSandwiches[0],
-            quantity = 2,
-            selectedExtras = listOf<Extra>(
-                sampleExtras[0],
-                sampleExtras[1]
-            ),
-            note = "No onions"
-        ),
-        CartItem(
-            sandwich = sampleSandwiches[2],
-            quantity = 1
-        )
-    )
-
-    CartScreen(
-        contentPadding = PaddingValues(0.dp),
-        cartItems = cartItems,
-        onContinueShopping = {},
-        onCheckout = {},
-        onQuantityChange = { _, _ -> },
-        onRemove = {}
-    )
-}
 
 @Composable
 internal fun CartScreen(
@@ -82,44 +57,243 @@ internal fun CartScreen(
     onRemove: (CartItem) -> Unit,
 ) {
     val total = cartItems.totalPrice()
+
     LazyColumn(
-        modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background),
-        contentPadding = PaddingValues(start = 20.dp, top = contentPadding.calculateTopPadding() + 24.dp, end = 20.dp, bottom = contentPadding.calculateBottomPadding() + 24.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background),
+        contentPadding = PaddingValues(
+            start = 20.dp,
+            top = contentPadding.calculateTopPadding() + 24.dp,
+            end = 20.dp,
+            bottom = contentPadding.calculateBottomPadding() + 24.dp,
+        ),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        item { Text(stringResource(R.string.cart_title), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold) }
+        item {
+            Text(
+                text = stringResource(R.string.cart_title),
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+            )
+        }
+
         if (cartItems.isEmpty()) {
-            item { EmptyState(Icons.Filled.ShoppingCart, stringResource(R.string.empty_cart), stringResource(R.string.empty_cart_body), onContinueShopping, stringResource(R.string.continue_shopping)) }
+            item {
+                EmptyState(
+                    icon = Icons.Filled.ShoppingCart,
+                    title = stringResource(R.string.empty_cart),
+                    body = stringResource(R.string.empty_cart_body),
+                    onAction = onContinueShopping,
+                    actionLabel = stringResource(R.string.continue_shopping),
+                )
+            }
         } else {
-            items(cartItems) { item -> CartItemCard(item, onQuantityChange, onRemove) }
+            items(
+                items = cartItems,
+                key = { item -> item.sandwich.id },
+            ) { item ->
+                CartItemCard(
+                    item = item,
+                    onQuantityChange = onQuantityChange,
+                    onRemove = onRemove,
+                )
+            }
+
             item {
                 TotalCard(total)
+
                 Spacer(Modifier.height(12.dp))
-                Button(onClick = onCheckout, modifier = Modifier.fillMaxWidth().height(54.dp)) { Text(stringResource(R.string.checkout_action), fontWeight = FontWeight.Bold) }
-                OutlinedButton(onClick = onContinueShopping, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.continue_shopping)) }
+
+                Button(
+                    onClick = onCheckout,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(54.dp),
+                ) {
+                    Text(
+                        text = stringResource(R.string.checkout_action),
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
+
+                OutlinedButton(
+                    onClick = onContinueShopping,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(stringResource(R.string.continue_shopping))
+                }
             }
         }
     }
 }
 
 @Composable
+internal fun CartItemCard(
+    item: CartItem,
+    onQuantityChange: (CartItem, Int) -> Unit,
+    onRemove: (CartItem) -> Unit,
+) {
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface,
+        ),
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Row(
+                verticalAlignment = Alignment.Top,
+            ) {
+                Column(
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Text(
+                        text = item.sandwich.name,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                    )
 
-internal fun CartItemCard(item: CartItem, onQuantityChange: (CartItem, Int) -> Unit, onRemove: (CartItem) -> Unit) {
-    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Row(verticalAlignment = Alignment.Top) {
-                Column(Modifier.weight(1f)) {
-                    Text(item.sandwich.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    if (item.selectedExtras.isNotEmpty()) Text(item.selectedExtras.joinToString { it.name }, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    if (item.note.isNotBlank()) Text(stringResource(R.string.note_value, item.note), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    if (item.selectedExtras.isNotEmpty()) {
+                        Text(
+                            text = item.selectedExtras.joinToString { it.name },
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+
+                    if (item.note.isNotBlank()) {
+                        Text(
+                            text = stringResource(R.string.note_value, item.note),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
-                IconButton(onClick = { onRemove(item) }) { Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.cd_remove)) }
+
+                IconButton(
+                    onClick = {
+                        onRemove(item)
+                    },
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Delete,
+                        contentDescription = stringResource(R.string.cd_remove),
+                    )
+                }
             }
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                QuantityRow(item.quantity) { onQuantityChange(item, it) }
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                QuantityRow(
+                    quantity = item.quantity,
+                    onChange = {
+                        onQuantityChange(item, it)
+                    },
+                )
+
                 Spacer(Modifier.weight(1f))
-                Text(formatPrice(item.lineTotal()), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+
+                Text(
+                    text = formatPrice(item.lineTotal()),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                )
             }
+        }
+    }
+}
+
+@Preview(showBackground = true, showSystemUi = true)
+@Composable
+private fun CartScreenPreview() {
+    val cartItems = listOf(
+        CartItem(
+            sandwich = sampleSandwiches[0],
+            quantity = 2,
+            selectedExtras = listOf<Extra>(
+                sampleExtras[0],
+                sampleExtras[1],
+            ),
+            note = "No onions",
+        ),
+        CartItem(
+            sandwich = sampleSandwiches[2],
+            quantity = 1,
+        ),
+    )
+
+    SandwixTheme (
+        darkTheme = false
+    ){
+        Scaffold(
+            topBar = {
+                SandwixTopBar(
+                    title = stringResource(R.string.nav_cart),
+                )
+            },
+            bottomBar = {
+                SandwixBottomBar(
+                    selectedTab = MainTab.Cart,
+                    onTabSelected = {},
+                )
+            },
+        ) { innerPadding ->
+            CartScreen(
+                contentPadding = innerPadding,
+                cartItems = cartItems,
+                onContinueShopping = {},
+                onCheckout = {},
+                onQuantityChange = { _, _ -> },
+                onRemove = {},
+            )
+        }
+    }
+}
+
+@Preview(showBackground = true, showSystemUi = true)
+@Composable
+private fun CartScreenPreviewDark() {
+    val cartItems = listOf(
+        CartItem(
+            sandwich = sampleSandwiches[0],
+            quantity = 2,
+            selectedExtras = listOf<Extra>(
+                sampleExtras[0],
+                sampleExtras[1],
+            ),
+            note = "No onions",
+        ),
+        CartItem(
+            sandwich = sampleSandwiches[2],
+            quantity = 1,
+        ),
+    )
+
+    SandwixTheme (
+        darkTheme = true
+    ){
+        Scaffold(
+            topBar = {
+                SandwixTopBar(
+                    title = stringResource(R.string.nav_cart),
+                )
+            },
+            bottomBar = {
+                SandwixBottomBar(
+                    selectedTab = MainTab.Cart,
+                    onTabSelected = {},
+                )
+            },
+        ) { innerPadding ->
+            CartScreen(
+                contentPadding = innerPadding,
+                cartItems = cartItems,
+                onContinueShopping = {},
+                onCheckout = {},
+                onQuantityChange = { _, _ -> },
+                onRemove = {},
+            )
         }
     }
 }

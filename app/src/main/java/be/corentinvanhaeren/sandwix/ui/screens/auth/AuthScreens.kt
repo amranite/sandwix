@@ -3,6 +3,7 @@ package be.corentinvanhaeren.sandwix.ui.screens.auth
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -17,7 +18,6 @@ import androidx.compose.material.icons.filled.MailOutline
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material3.Button
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -42,37 +42,35 @@ import androidx.compose.ui.unit.dp
 import be.corentinvanhaeren.sandwix.R
 import be.corentinvanhaeren.sandwix.ui.components.BrandMark
 import be.corentinvanhaeren.sandwix.ui.components.SandwixTopBar
-
-//@Preview(showBackground = true)
-//@Composable
-//private fun LoginScreenPreview() {
-//    LoginScreen(
-//        onLogin = {},
-//        onRegister = {}
-//    )
-//}
-//
-//@Preview(showBackground = true)
-//@Composable
-//private fun RegisterScreenPreview() {
-//    RegisterScreen(
-//        onBack = {},
-//        onLogin = {},
-//        onRegister = {}
-//    )
-//}
+import be.corentinvanhaeren.sandwix.ui.theme.SandwixTheme
 
 @Composable
-internal fun LoginScreen(onLogin: () -> Unit, onRegister: () -> Unit) {
+internal fun LoginScreen(
+    contentPadding: PaddingValues,
+    onLogin: () -> Unit,
+    onRegister: () -> Unit,
+) {
     var email by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
 
-    AuthScaffold(title = stringResource(R.string.login_title)) {
+    AuthContent(contentPadding = contentPadding) {
         BrandMark()
+
         Spacer(Modifier.height(16.dp))
-        Text(stringResource(R.string.app_name_display), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-        Text(stringResource(R.string.login_welcome), style = MaterialTheme.typography.titleMedium)
+
+        Text(
+            text = stringResource(R.string.app_name_display),
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+        )
+
+        Text(
+            text = stringResource(R.string.login_welcome),
+            style = MaterialTheme.typography.titleMedium,
+        )
+
         Spacer(Modifier.height(24.dp))
+
         AuthTextField(
             value = email,
             onValueChange = { email = it },
@@ -81,7 +79,9 @@ internal fun LoginScreen(onLogin: () -> Unit, onRegister: () -> Unit) {
             leadingIcon = Icons.Filled.MailOutline,
             keyboardType = KeyboardType.Email,
         )
+
         Spacer(Modifier.height(12.dp))
+
         AuthTextField(
             value = password,
             onValueChange = { password = it },
@@ -91,10 +91,21 @@ internal fun LoginScreen(onLogin: () -> Unit, onRegister: () -> Unit) {
             keyboardType = KeyboardType.Password,
             isPassword = true,
         )
+
         Spacer(Modifier.height(20.dp))
-        Button(onClick = onLogin, modifier = Modifier.fillMaxWidth().height(52.dp)) {
-            Text(stringResource(R.string.login_action), fontWeight = FontWeight.Bold)
+
+        Button(
+            onClick = onLogin,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(52.dp),
+        ) {
+            Text(
+                text = stringResource(R.string.login_action),
+                fontWeight = FontWeight.Bold,
+            )
         }
+
         TextButton(onClick = onRegister) {
             Text(stringResource(R.string.register_prompt))
         }
@@ -102,58 +113,122 @@ internal fun LoginScreen(onLogin: () -> Unit, onRegister: () -> Unit) {
 }
 
 @Composable
-
-internal fun RegisterScreen(onBack: () -> Unit, onRegister: () -> Unit, onLogin: () -> Unit) {
+internal fun RegisterScreen(
+    contentPadding: PaddingValues,
+    onRegister: () -> Unit,
+    onLogin: () -> Unit,
+) {
     var name by rememberSaveable { mutableStateOf("") }
     var email by rememberSaveable { mutableStateOf("") }
     var phone by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
     var confirmPassword by rememberSaveable { mutableStateOf("") }
 
-    AuthScaffold(title = stringResource(R.string.register_title), onBack = onBack) {
+    AuthContent(contentPadding = contentPadding) {
         BrandMark()
+
         Spacer(Modifier.height(16.dp))
-        Text(stringResource(R.string.register_headline), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+
+        Text(
+            text = stringResource(R.string.register_headline),
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+        )
+
         Spacer(Modifier.height(20.dp))
-        AuthTextField(name, { name = it }, stringResource(R.string.name_label), stringResource(R.string.name_placeholder), Icons.Filled.Person)
+
+        AuthTextField(
+            value = name,
+            onValueChange = { name = it },
+            label = stringResource(R.string.name_label),
+            placeholder = stringResource(R.string.name_placeholder),
+            leadingIcon = Icons.Filled.Person,
+        )
+
         Spacer(Modifier.height(10.dp))
-        AuthTextField(email, { email = it }, stringResource(R.string.email_label), stringResource(R.string.email_placeholder), Icons.Filled.MailOutline, KeyboardType.Email)
+
+        AuthTextField(
+            value = email,
+            onValueChange = { email = it },
+            label = stringResource(R.string.email_label),
+            placeholder = stringResource(R.string.email_placeholder),
+            leadingIcon = Icons.Filled.MailOutline,
+            keyboardType = KeyboardType.Email,
+        )
+
         Spacer(Modifier.height(10.dp))
-        AuthTextField(phone, { phone = it }, stringResource(R.string.phone_label), stringResource(R.string.phone_placeholder), Icons.Filled.Phone, KeyboardType.Phone)
+
+        AuthTextField(
+            value = phone,
+            onValueChange = { phone = it },
+            label = stringResource(R.string.phone_label),
+            placeholder = stringResource(R.string.phone_placeholder),
+            leadingIcon = Icons.Filled.Phone,
+            keyboardType = KeyboardType.Phone,
+        )
+
         Spacer(Modifier.height(10.dp))
-        AuthTextField(password, { password = it }, stringResource(R.string.password_label), stringResource(R.string.password_placeholder), Icons.Filled.Lock, KeyboardType.Password, true)
+
+        AuthTextField(
+            value = password,
+            onValueChange = { password = it },
+            label = stringResource(R.string.password_label),
+            placeholder = stringResource(R.string.password_placeholder),
+            leadingIcon = Icons.Filled.Lock,
+            keyboardType = KeyboardType.Password,
+            isPassword = true,
+        )
+
         Spacer(Modifier.height(10.dp))
-        AuthTextField(confirmPassword, { confirmPassword = it }, stringResource(R.string.confirm_password_label), stringResource(R.string.password_placeholder), Icons.Filled.Lock, KeyboardType.Password, true)
+
+        AuthTextField(
+            value = confirmPassword,
+            onValueChange = { confirmPassword = it },
+            label = stringResource(R.string.confirm_password_label),
+            placeholder = stringResource(R.string.password_placeholder),
+            leadingIcon = Icons.Filled.Lock,
+            keyboardType = KeyboardType.Password,
+            isPassword = true,
+        )
+
         Spacer(Modifier.height(18.dp))
-        Button(onClick = onRegister, modifier = Modifier.fillMaxWidth().height(52.dp)) {
-            Text(stringResource(R.string.register_action), fontWeight = FontWeight.Bold)
+
+        Button(
+            onClick = onRegister,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(52.dp),
+        ) {
+            Text(
+                text = stringResource(R.string.register_action),
+                fontWeight = FontWeight.Bold,
+            )
         }
+
         TextButton(onClick = onLogin) {
             Text(stringResource(R.string.login_prompt))
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-
-internal fun AuthScaffold(title: String, onBack: (() -> Unit)? = null, content: @Composable ColumnScope.() -> Unit) {
-    Scaffold(topBar = { SandwixTopBar(title, onBack) }) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background)
-                .padding(padding)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp, vertical = 32.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            content = content,
-        )
-    }
+internal fun AuthContent(
+    contentPadding: PaddingValues,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+            .padding(contentPadding)
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 24.dp, vertical = 32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        content = content,
+    )
 }
 
 @Composable
-
 internal fun AuthTextField(
     value: String,
     onValueChange: (String) -> Unit,
@@ -167,12 +242,115 @@ internal fun AuthTextField(
         value = value,
         onValueChange = onValueChange,
         modifier = Modifier.fillMaxWidth(),
-        label = { Text(label) },
-        placeholder = { Text(placeholder) },
-        leadingIcon = { Icon(leadingIcon, contentDescription = null) },
+        label = {
+            Text(label)
+        },
+        placeholder = {
+            Text(placeholder)
+        },
+        leadingIcon = {
+            Icon(
+                imageVector = leadingIcon,
+                contentDescription = null,
+            )
+        },
         singleLine = true,
         keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
-        visualTransformation = if (isPassword) PasswordVisualTransformation() else VisualTransformation.None,
+        visualTransformation = if (isPassword) {
+            PasswordVisualTransformation()
+        } else {
+            VisualTransformation.None
+        },
         shape = MaterialTheme.shapes.large,
     )
+}
+
+@Preview(showBackground = true, showSystemUi = true)
+@Composable
+private fun LoginScreenPreview() {
+    SandwixTheme(
+        darkTheme = false
+    ) {
+        Scaffold(
+            topBar = {
+                SandwixTopBar(
+                    title = stringResource(R.string.login_title),
+                )
+            },
+        ) { innerPadding ->
+            LoginScreen(
+                contentPadding = innerPadding,
+                onLogin = {},
+                onRegister = {},
+            )
+        }
+    }
+}
+
+@Preview(showBackground = true, showSystemUi = true)
+@Composable
+private fun LoginScreenPreviewDark() {
+    SandwixTheme(
+        darkTheme = true
+    ) {
+        Scaffold(
+            topBar = {
+                SandwixTopBar(
+                    title = stringResource(R.string.login_title),
+                )
+            },
+        ) { innerPadding ->
+            LoginScreen(
+                contentPadding = innerPadding,
+                onLogin = {},
+                onRegister = {},
+            )
+        }
+    }
+}
+
+@Preview(showBackground = true, showSystemUi = true)
+@Composable
+private fun RegisterScreenPreview() {
+    SandwixTheme (
+        darkTheme = false
+    ){
+        Scaffold(
+            topBar = {
+                SandwixTopBar(
+                    title = stringResource(R.string.register_title),
+                    onBack = {},
+                )
+            },
+        ) { innerPadding ->
+            RegisterScreen(
+                contentPadding = innerPadding,
+                onRegister = {},
+                onLogin = {},
+            )
+        }
+    }
+}
+
+@Preview(showBackground = true, showSystemUi = true)
+@Composable
+private fun RegisterScreenPreviewDark() {
+    SandwixTheme (
+        darkTheme = true
+    ){
+        Scaffold(
+            topBar = {
+                SandwixTopBar(
+                    title = stringResource(R.string.register_title),
+                    onBack = {},
+                )
+            },
+        ) { innerPadding ->
+            RegisterScreen(
+                contentPadding = innerPadding,
+                onRegister = {},
+                onLogin = {},
+            )
+        }
+    }
 }
