@@ -13,6 +13,12 @@ data class LoginResponse(
     val rol: String
 )
 
+data class AuthSession(
+    val token: String,
+    val userId: Int,
+    val role: String
+)
+
 @Serializable
 data class Login(
     val email: String,
@@ -42,4 +48,3 @@ data class NieuweGebruiker(
     val telefoonnummer: String,
     val wachtwoord: String
 )
-
