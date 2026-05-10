@@ -129,7 +129,12 @@ data class BestellingAanmakenResponse(
     val code: Int? = null,
     val status: Int? = null,
     val message: String? = null,
-    val data: BestellingDetails? = null
+    val data: String? = null,
+
+    @SerialName("bestelling_id")
+    val bestellingId: Int? = null,
+
+    val totaalbedrag: Double? = null
 )
 
 @Serializable

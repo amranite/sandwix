@@ -26,8 +26,13 @@ import retrofit2.http.Path
 
 private const val baseUrl = "https://corentinvanhaeren.be/project/api/"
 
+val SandwixJson = Json {
+    ignoreUnknownKeys = true
+    coerceInputValues = true
+}
+
 private val retrofit = Retrofit.Builder()
-    .addConverterFactory(Json.asConverterFactory("application/json".toMediaType()))
+    .addConverterFactory(SandwixJson.asConverterFactory("application/json".toMediaType()))
     .baseUrl(baseUrl)
     .build()
 
