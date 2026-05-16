@@ -3,14 +3,19 @@ package be.corentinvanhaeren.sandwix.ui
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -24,25 +29,45 @@ import be.corentinvanhaeren.sandwix.model.CustomerOrder
 import be.corentinvanhaeren.sandwix.model.sampleLocations
 import be.corentinvanhaeren.sandwix.model.sampleOrders
 import be.corentinvanhaeren.sandwix.model.sampleSandwiches
+import be.corentinvanhaeren.sandwix.network.SandwixApi
 import be.corentinvanhaeren.sandwix.ui.components.SandwixBottomBar
 import be.corentinvanhaeren.sandwix.ui.components.SandwixTopBar
 import be.corentinvanhaeren.sandwix.ui.navigation.MainTab
 import be.corentinvanhaeren.sandwix.ui.navigation.Route
-import be.corentinvanhaeren.sandwix.ui.screens.auth.LoginScreen
-import be.corentinvanhaeren.sandwix.ui.screens.auth.RegisterScreen
 import be.corentinvanhaeren.sandwix.ui.screens.cart.CartScreen
 import be.corentinvanhaeren.sandwix.ui.screens.checkout.CheckoutScreen
 import be.corentinvanhaeren.sandwix.ui.screens.confirmation.ConfirmationScreen
 import be.corentinvanhaeren.sandwix.ui.screens.detail.SandwichDetailScreen
 import be.corentinvanhaeren.sandwix.ui.screens.home.HomeScreen
+import be.corentinvanhaeren.sandwix.ui.screens.home.HomeViewModel
+import be.corentinvanhaeren.sandwix.ui.screens.login.LoginScreen
+import be.corentinvanhaeren.sandwix.ui.screens.login.LoginViewModel
 import be.corentinvanhaeren.sandwix.ui.screens.orders.OrderDetailScreen
 import be.corentinvanhaeren.sandwix.ui.screens.orders.OrdersScreen
 import be.corentinvanhaeren.sandwix.ui.screens.profile.ProfileScreen
+import be.corentinvanhaeren.sandwix.ui.screens.register.RegisterScreen
+import be.corentinvanhaeren.sandwix.ui.screens.register.RegisterViewModel
 import be.corentinvanhaeren.sandwix.ui.theme.SandwixTheme
+import be.corentinvanhaeren.sandwix.data.TokenStore
+import be.corentinvanhaeren.sandwix.network.SandwixApiService
 
 @Composable
 fun SandwixApp() {
+    val context = LocalContext.current.applicationContext
+    val tokenStore = remember { TokenStore(context) }
+    val apiService = remember { SandwixApi.create(context) }
+
     val navController = rememberNavController()
+
+    var token by rememberSaveable { mutableStateOf(tokenStore.getToken()) }
+    var gebruikerId by rememberSaveable { mutableStateOf(tokenStore.getGebruikerId()) }
+    var rol by rememberSaveable { mutableStateOf(tokenStore.getRol()) }
+
+    val startDestination = if (tokenStore.isLoggedIn()) {
+        Route.Home.routeName
+    } else {
+        Route.Login.routeName
+    }
 
     val cart = remember { mutableStateListOf<CartItem>() }
 
@@ -112,6 +137,12 @@ fun SandwixApp() {
     }
 
     fun logout() {
+        tokenStore.clearSession()
+
+        token = null
+        gebruikerId = null
+        rol = null
+
         navController.navigate(Route.Login.routeName) {
             popUpTo(Route.Home.routeName) {
                 inclusive = true
@@ -150,6 +181,21 @@ fun SandwixApp() {
             onNavigateToMainTab = ::navigateToMainTab,
             onNavigateAfterLoginOrRegister = ::navigateAfterLoginOrRegister,
             onLogout = ::logout,
+            gebruikerId = gebruikerId,
+            rol = rol,
+            onLoginSuccess = { responseToken, responseGebruikerId, responseRol ->
+                tokenStore.saveSession(
+                    token = responseToken,
+                    gebruikerId = responseGebruikerId,
+                    rol = responseRol
+                )
+
+                token = responseToken
+                gebruikerId = responseGebruikerId
+                rol = responseRol
+            },
+            apiService = apiService,
+            startDestination = startDestination,
         )
     }
 }
@@ -165,15 +211,43 @@ private fun SandwixNavHost(
     onNavigateToMainTab: (Route) -> Unit,
     onNavigateAfterLoginOrRegister: () -> Unit,
     onLogout: () -> Unit,
+    gebruikerId: Int?,
+    rol: String?,
+    onLoginSuccess: (String, Int, String) -> Unit,
+    apiService: SandwixApiService,
+    startDestination: String,
 ) {
     NavHost(
         navController = navController,
-        startDestination = Route.Login.routeName,
-    ) {
+        startDestination = startDestination,
+    )  {
         composable(route = Route.Login.routeName) {
+            val loginViewModel: LoginViewModel = viewModel(
+                factory = ViewModelFactory {
+                    LoginViewModel(
+                        apiService = apiService
+                    )
+                }
+            )
+
+            val loginUiState by loginViewModel.uiState.collectAsState()
+
             LoginScreen(
                 contentPadding = contentPadding,
-                onLogin = onNavigateAfterLoginOrRegister,
+                authUiState = loginUiState,
+                onEmailUpdate = loginViewModel::onEmailUpdate,
+                onPasswordUpdate = loginViewModel::onPasswordUpdate,
+                onLogin = {
+                    loginViewModel.login { responseToken, responseGebruikerId, responseRol ->
+                        onLoginSuccess(
+                            responseToken,
+                            responseGebruikerId,
+                            responseRol
+                        )
+
+                        onNavigateAfterLoginOrRegister()
+                    }
+                },
                 onRegister = {
                     navController.navigate(Route.Register.routeName)
                 },
@@ -181,9 +255,35 @@ private fun SandwixNavHost(
         }
 
         composable(route = Route.Register.routeName) {
+            val registerViewModel: RegisterViewModel = viewModel(
+                factory = ViewModelFactory {
+                    RegisterViewModel(
+                        apiService = apiService
+                    )
+                }
+            )
+            val registerUiState by registerViewModel.uiState.collectAsState()
+
             RegisterScreen(
                 contentPadding = contentPadding,
-                onRegister = onNavigateAfterLoginOrRegister,
+                registerUiState = registerUiState,
+                onNaamUpdate = registerViewModel::onNaamUpdate,
+                onEmailUpdate = registerViewModel::onEmailUpdate,
+                onTelefoonnummerUpdate = registerViewModel::onTelefoonnummerUpdate,
+                onWachtwoordUpdate = registerViewModel::onWachtwoordUpdate,
+                onBevestigWachtwoordUpdate = registerViewModel::onBevestigWachtwoordUpdate,
+                onRegister = {
+                    registerViewModel.register(
+                        onRegisterSuccess = {
+                            navController.navigate(Route.Login.routeName) {
+                                popUpTo(Route.Register.routeName) {
+                                    inclusive = true
+                                }
+                                launchSingleTop = true
+                            }
+                        }
+                    )
+                },
                 onLogin = {
                     navController.navigateUp()
                 },
@@ -191,11 +291,28 @@ private fun SandwixNavHost(
         }
 
         composable(route = Route.Home.routeName) {
+            val homeViewModel: HomeViewModel = viewModel(
+                factory = ViewModelFactory {
+                    HomeViewModel(
+                        apiService = apiService
+                    )
+                }
+            )
+            val homeUiState by homeViewModel.uiState.collectAsState()
+
+
+            /*
+            LaunchedEffect(Unit) {
+                homeViewModel.getBroodjes()
+            }
+             */
             HomeScreen(
                 contentPadding = contentPadding,
-                sandwiches = sampleSandwiches,
-                onSandwichClick = { sandwich ->
-                    navController.navigate(Route.detailRoute(sandwich.id))
+                homeUiState = homeUiState,
+                onQueryUpdate = homeViewModel::onQueryUpdate,
+                onRetry = homeViewModel::getBroodjes,
+                onBroodjeClick = { broodje ->
+                    navController.navigate(Route.detailRoute(/*broodje.broodjeId*/1))
                 },
             )
         }

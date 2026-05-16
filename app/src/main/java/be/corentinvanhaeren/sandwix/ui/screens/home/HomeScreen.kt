@@ -19,105 +19,162 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import be.corentinvanhaeren.sandwix.R
-import be.corentinvanhaeren.sandwix.model.Sandwich
-import be.corentinvanhaeren.sandwix.model.sampleSandwiches
-import be.corentinvanhaeren.sandwix.ui.components.SandwixBottomBar
-import be.corentinvanhaeren.sandwix.ui.components.SandwixTopBar
-import be.corentinvanhaeren.sandwix.ui.navigation.MainTab
-import be.corentinvanhaeren.sandwix.ui.theme.SandwixTheme
-import be.corentinvanhaeren.sandwix.ui.util.formatPrice
+import be.corentinvanhaeren.sandwix.model.Broodje
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun HomeScreen(
     contentPadding: PaddingValues,
-    sandwiches: List<Sandwich>,
-    onSandwichClick: (Sandwich) -> Unit,
+    homeUiState: HomeUiState,
+    onQueryUpdate: (String) -> Unit,
+    onRetry: () -> Unit,
+    onBroodjeClick: (Broodje) -> Unit,
 ) {
-    var query by rememberSaveable { mutableStateOf("") }
+    val isRefreshing = homeUiState.apiState is HomeApiState.Loading
 
-    val filtered = sandwiches.filter { sandwich ->
-        sandwich.name.contains(query, ignoreCase = true) ||
-                sandwich.description.contains(query, ignoreCase = true)
+    val filtered = homeUiState.broodjes.filter { broodje ->
+        broodje.naam.contains(homeUiState.query, ignoreCase = true)
     }
 
-    LazyColumn(
+    PullToRefreshBox(
+        isRefreshing = isRefreshing,
+        onRefresh = onRetry,
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background),
-        contentPadding = PaddingValues(
-            start = 20.dp,
-            top = contentPadding.calculateTopPadding() + 24.dp,
-            end = 20.dp,
-            bottom = contentPadding.calculateBottomPadding() + 24.dp,
-        ),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
+            .background(MaterialTheme.colorScheme.background)
     ) {
-        item {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(
+                start = 20.dp,
+                top = contentPadding.calculateTopPadding() + 24.dp,
+                end = 20.dp,
+                bottom = contentPadding.calculateBottomPadding() + 24.dp,
+            ),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            item {
+                Text(
+                    text = stringResource(R.string.home_title),
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                )
+
+                Text(
+                    text = stringResource(R.string.home_subtitle),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+
+                Spacer(Modifier.height(16.dp))
+
+                OutlinedTextField(
+                    value = homeUiState.query,
+                    onValueChange = onQueryUpdate,
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = {
+                        Text(stringResource(R.string.search_placeholder))
+                    },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Filled.Search,
+                            contentDescription = null,
+                        )
+                    },
+                    singleLine = true,
+                    shape = MaterialTheme.shapes.extraLarge,
+                )
+
+                Spacer(Modifier.height(12.dp))
+
+                DeliveryNotice()
+            }
+
+            when (homeUiState.apiState) {
+                is HomeApiState.Loading -> {
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(24.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator()
+                        }
+                    }
+                }
+
+                is HomeApiState.Error -> {
+                    item {
+                        ErrorCard(
+                            message = homeUiState.errorMessage,
+                            onRetry = onRetry
+                        )
+                    }
+                }
+
+                is HomeApiState.Success -> {
+                    items(
+                        items = filtered,
+                        key = { broodje -> broodje.broodjeId },
+                    ) { broodje ->
+                        BroodjeCard(
+                            broodje = broodje,
+                            onClick = {
+                                onBroodjeClick(broodje)
+                            },
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+internal fun ErrorCard(
+    message: String,
+    onRetry: () -> Unit,
+) {
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.errorContainer,
+        ),
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
             Text(
-                text = stringResource(R.string.home_title),
-                style = MaterialTheme.typography.headlineMedium,
+                text = message,
+                color = MaterialTheme.colorScheme.onErrorContainer,
                 fontWeight = FontWeight.Bold,
             )
 
-            Text(
-                text = stringResource(R.string.home_subtitle),
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-
-            Spacer(Modifier.height(16.dp))
-
-            OutlinedTextField(
-                value = query,
-                onValueChange = { query = it },
-                modifier = Modifier.fillMaxWidth(),
-                placeholder = {
-                    Text(stringResource(R.string.search_placeholder))
-                },
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Filled.Search,
-                        contentDescription = null,
-                    )
-                },
-                singleLine = true,
-                shape = MaterialTheme.shapes.extraLarge,
-            )
-
-            Spacer(Modifier.height(12.dp))
-
-            DeliveryNotice()
-        }
-
-        items(
-            items = filtered,
-            key = { sandwich -> sandwich.id },
-        ) { sandwich ->
-            SandwichCard(
-                sandwich = sandwich,
-                onClick = {
-                    onSandwichClick(sandwich)
-                },
-            )
+            Button(onClick = onRetry) {
+                Text("Opnieuw proberen")
+            }
         }
     }
 }
@@ -157,8 +214,8 @@ internal fun DeliveryNotice() {
 }
 
 @Composable
-internal fun SandwichCard(
-    sandwich: Sandwich,
+internal fun BroodjeCard(
+    broodje: Broodje,
     onClick: () -> Unit,
 ) {
     Card(
@@ -175,26 +232,26 @@ internal fun SandwichCard(
             horizontalArrangement = Arrangement.spacedBy(16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            SandwichIcon()
+            BroodjeImage(broodje = broodje)
 
             Column(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 Text(
-                    text = sandwich.name,
+                    text = broodje.naam,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                 )
 
                 Text(
-                    text = sandwich.description,
+                    text = "Vers belegd broodje",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
 
                 Text(
-                    text = formatPrice(sandwich.price),
+                    text = "€ ${broodje.basisPrijs}",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary,
@@ -203,12 +260,36 @@ internal fun SandwichCard(
         }
     }
 }
-
 @Composable
-internal fun SandwichIcon() {
+internal fun BroodjeImage(
+    broodje: Broodje,
+    modifier: Modifier = Modifier,
+) {
+    if (broodje.afbeeldingUrl.isBlank()) {
+        SandwichIcon(modifier = modifier)
+        return
+    }
+
+    AsyncImage(
+        model = ImageRequest.Builder(context = LocalContext.current)
+            .data(broodje.afbeeldingUrl)
+            .crossfade(true)
+            .build(),
+        contentDescription = "Foto van ${broodje.naam}",
+        contentScale = ContentScale.Crop,
+        modifier = modifier
+            .size(88.dp)
+            .clip(MaterialTheme.shapes.large)
+            .background(MaterialTheme.colorScheme.surfaceVariant),
+    )
+}
+@Composable
+internal fun SandwichIcon(
+    modifier: Modifier = Modifier,
+) {
     Box(
-        modifier = Modifier
-            .size(56.dp)
+        modifier = modifier
+            .size(88.dp)
             .clip(MaterialTheme.shapes.large)
             .background(MaterialTheme.colorScheme.primaryContainer),
         contentAlignment = Alignment.Center,
@@ -220,7 +301,7 @@ internal fun SandwichIcon() {
         )
     }
 }
-
+/*
 @Preview(showBackground = true, showSystemUi = true)
 @Composable
 private fun HomeScreenPreview() {
@@ -276,3 +357,4 @@ private fun HomeScreenPreviewDark() {
         }
     }
 }
+ */

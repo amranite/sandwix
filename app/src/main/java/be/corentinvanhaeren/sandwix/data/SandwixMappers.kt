@@ -8,11 +8,13 @@ import be.corentinvanhaeren.sandwix.model.LoginResponse
 import be.corentinvanhaeren.sandwix.model.Sandwich
 import java.math.BigDecimal
 
-internal fun LoginResponse.toAuthSession(): AuthSession = AuthSession(
-    token = token,
-    userId = id,
-    role = rol,
-)
+internal fun LoginResponse.toAuthSession(): AuthSession {
+    return AuthSession(
+        token = requireNotNull(token) { "Token ontbreekt in login response" },
+        userId = requireNotNull(id) { "User id ontbreekt in login response" },
+        role = requireNotNull(rol) { "Rol ontbreekt in login response" }
+    )
+}
 
 internal fun Broodje.toSandwich(): Sandwich = Sandwich(
     id = broodjeId.toInt(),

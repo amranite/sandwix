@@ -1,6 +1,5 @@
 package be.corentinvanhaeren.sandwix.model
 
-import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 // login
@@ -8,9 +7,9 @@ import kotlinx.serialization.Serializable
 data class LoginResponse(
     val status: Int,
     val message: String,
-    val token: String,
-    val id: Int,
-    val rol: String
+    val token: String? = null,
+    val id: Int? = null,
+    val rol: String? = null
 )
 
 data class AuthSession(

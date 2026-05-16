@@ -12,7 +12,7 @@ import retrofit2.HttpException
 import java.io.IOException
 
 class SandwixRepository(
-    private val apiService: SandwixApiService = SandwixApi.retroFitService,
+    private val apiService: SandwixApiService,
 ) {
     suspend fun login(email: String, password: String): ApiResult<AuthSession> = safeApiCall {
         apiService.login(Login(email = email, wachtwoord = password)).toAuthSession()
