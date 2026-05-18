@@ -22,6 +22,7 @@ internal fun Broodje.toSandwich(): Sandwich = Sandwich(
     description = "Tap to view ingredients and extras.",
     ingredients = emptyList(),
     price = basisPrijs.toBigDecimal(),
+    imageUrl = afbeeldingUrl,
 )
 
 internal fun BroodjeDetails.toSandwich(): Sandwich = Sandwich(
@@ -30,6 +31,7 @@ internal fun BroodjeDetails.toSandwich(): Sandwich = Sandwich(
     description = ingredienten.joinToString { it.naam },
     ingredients = ingredienten.map { it.naam },
     price = basisPrijs.toBigDecimal(),
+    imageUrl = afbeeldingUrl,
     extras = extraIngredienten.map { extra ->
         Extra(
             id = extra.ingredientId,

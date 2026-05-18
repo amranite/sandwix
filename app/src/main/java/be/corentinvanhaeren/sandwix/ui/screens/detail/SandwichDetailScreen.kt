@@ -21,10 +21,10 @@ import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -37,26 +37,72 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import be.corentinvanhaeren.sandwix.R
 import be.corentinvanhaeren.sandwix.model.CartItem
 import be.corentinvanhaeren.sandwix.model.Extra
 import be.corentinvanhaeren.sandwix.model.Sandwich
-import be.corentinvanhaeren.sandwix.model.sampleSandwiches
 import be.corentinvanhaeren.sandwix.ui.components.QuantityRow
-import be.corentinvanhaeren.sandwix.ui.components.SandwixTopBar
 import be.corentinvanhaeren.sandwix.ui.components.SectionTitle
-import be.corentinvanhaeren.sandwix.ui.theme.SandwixTheme
+import be.corentinvanhaeren.sandwix.ui.screens.home.ErrorCard
 import be.corentinvanhaeren.sandwix.ui.util.formatPrice
 import be.corentinvanhaeren.sandwix.ui.util.sumOfPrice
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import java.math.BigDecimal
+
+@Composable
+internal fun SandwichDetailScreen(
+    contentPadding: PaddingValues,
+    detailUiState: SandwichDetailUiState,
+    onRetry: () -> Unit,
+    onAddToCart: (CartItem) -> Unit,
+) {
+    val sandwich = detailUiState.sandwich
+
+    when {
+        sandwich != null -> SandwichDetailContent(
+            contentPadding = contentPadding,
+            sandwich = sandwich,
+            onAddToCart = onAddToCart,
+        )
+
+        detailUiState.apiState is SandwichDetailApiState.Loading -> {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(contentPadding),
+                contentAlignment = Alignment.Center,
+            ) {
+                CircularProgressIndicator()
+            }
+        }
+
+        else -> {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(contentPadding)
+                    .padding(20.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                ErrorCard(
+                    message = (detailUiState.apiState as? SandwichDetailApiState.Error)?.message
+                        ?: detailUiState.errorMessage,
+                    onRetry = onRetry,
+                )
+            }
+        }
+    }
+}
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-internal fun SandwichDetailScreen(
+private fun SandwichDetailContent(
     contentPadding: PaddingValues,
     sandwich: Sandwich,
     onAddToCart: (CartItem) -> Unit,
@@ -85,12 +131,7 @@ internal fun SandwichDetailScreen(
                 .background(MaterialTheme.colorScheme.primaryContainer),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.MenuBook,
-                contentDescription = null,
-                modifier = Modifier.size(72.dp),
-                tint = MaterialTheme.colorScheme.onPrimaryContainer,
-            )
+            SandwichHeroImage(sandwich = sandwich)
         }
 
         Text(
@@ -189,6 +230,31 @@ internal fun SandwichDetailScreen(
 }
 
 @Composable
+private fun SandwichHeroImage(
+    sandwich: Sandwich,
+) {
+    if (sandwich.imageUrl.isBlank()) {
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.MenuBook,
+            contentDescription = null,
+            modifier = Modifier.size(72.dp),
+            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+        )
+        return
+    }
+
+    AsyncImage(
+        model = ImageRequest.Builder(LocalContext.current)
+            .data(sandwich.imageUrl)
+            .crossfade(true)
+            .build(),
+        contentDescription = "Foto van ${sandwich.name}",
+        contentScale = ContentScale.Crop,
+        modifier = Modifier.fillMaxSize(),
+    )
+}
+
+@Composable
 internal fun SelectableExtraRow(
     extra: Extra,
     selected: Boolean,
@@ -221,53 +287,6 @@ internal fun SelectableExtraRow(
             Text(
                 text = "+ ${formatPrice(extra.price)}",
                 fontWeight = FontWeight.SemiBold,
-            )
-        }
-    }
-}
-
-@Preview(showBackground = true, showSystemUi = true)
-@Composable
-private fun SandwichDetailScreenPreview() {
-    SandwixTheme(
-        darkTheme = false
-    ) {
-        Scaffold(
-            topBar = {
-                SandwixTopBar(
-                    title = stringResource(R.string.detail_title),
-                    onBack = {},
-                )
-            },
-        ) { innerPadding ->
-            SandwichDetailScreen(
-                contentPadding = innerPadding,
-                sandwich = sampleSandwiches.first(),
-                onAddToCart = {},
-            )
-        }
-    }
-}
-
-
-@Preview(showBackground = true, showSystemUi = true)
-@Composable
-private fun SandwichDetailScreenPreviewDark() {
-    SandwixTheme(
-        darkTheme = true
-    ) {
-        Scaffold(
-            topBar = {
-                SandwixTopBar(
-                    title = stringResource(R.string.detail_title),
-                    onBack = {},
-                )
-            },
-        ) { innerPadding ->
-            SandwichDetailScreen(
-                contentPadding = innerPadding,
-                sandwich = sampleSandwiches.first(),
-                onAddToCart = {},
             )
         }
     }
