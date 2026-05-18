@@ -3,7 +3,18 @@ package be.corentinvanhaeren.sandwix.data
 import be.corentinvanhaeren.sandwix.model.BroodjeDetailsResponse
 import be.corentinvanhaeren.sandwix.model.BroodjesResponse
 import be.corentinvanhaeren.sandwix.model.LoginResponse
+import be.corentinvanhaeren.sandwix.model.NieuweBestelling
+import be.corentinvanhaeren.sandwix.model.NieuweGebruiker
+import be.corentinvanhaeren.sandwix.model.OpeningsurenResponse
+import be.corentinvanhaeren.sandwix.model.BestellingAanmakenResponse
+import be.corentinvanhaeren.sandwix.model.BestellingDetailsResponse
+import be.corentinvanhaeren.sandwix.model.BestellingenGebruikerResponse
+import be.corentinvanhaeren.sandwix.model.GebruikerAanmakenResponse
+import be.corentinvanhaeren.sandwix.model.LocatiesResponse
+import be.corentinvanhaeren.sandwix.model.Login
+import be.corentinvanhaeren.sandwix.model.LogoutResponse
 import be.corentinvanhaeren.sandwix.network.SandwixJson
+import be.corentinvanhaeren.sandwix.network.SandwixApiService
 import kotlinx.serialization.decodeFromString
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.ResponseBody.Companion.toResponseBody
@@ -56,6 +67,7 @@ class SandwixRepositoryMappingTest {
         assertEquals("Broodje Ham Kaas", sandwich.name)
         assertEquals(BigDecimal("4.50"), sandwich.price)
         assertEquals(emptyList<String>(), sandwich.ingredients)
+        assertEquals("https://corentinvanhaeren.be/project/api/uploads/1769350999_697627579abe8.jpg", sandwich.imageUrl)
     }
 
     @Test
@@ -89,11 +101,12 @@ class SandwixRepositoryMappingTest {
         assertEquals(2, sandwich.extras.size)
         assertEquals("spek", sandwich.extras[1].name)
         assertEquals(BigDecimal("1.50"), sandwich.extras[1].price)
+        assertEquals("https://corentinvanhaeren.be/project/api/uploads/1769350999_697627579abe8.jpg", sandwich.imageUrl)
     }
 
     @Test
     fun repository_formatsBearerAuthorizationHeader() {
-        val repository = SandwixRepository()
+        val repository = SandwixRepository(FakeSandwixApiService())
 
         assertEquals("Bearer abc123", repository.authHeader("abc123"))
     }
@@ -110,4 +123,31 @@ class SandwixRepositoryMappingTest {
 
         assertEquals("Ongeldige login", exception.apiErrorMessage())
     }
+}
+
+private class FakeSandwixApiService : SandwixApiService {
+    override suspend fun getBroodjes(): BroodjesResponse = throw NotImplementedError()
+
+    override suspend fun getBroodjeDetails(broodjeId: Int): BroodjeDetailsResponse = throw NotImplementedError()
+
+    override suspend fun getBestellingenVanGebruiker(gebruikerId: Int): BestellingenGebruikerResponse =
+        throw NotImplementedError()
+
+    override suspend fun getBestellingDetails(bestellingId: Int): BestellingDetailsResponse =
+        throw NotImplementedError()
+
+    override suspend fun nieuweBestelling(bestelling: NieuweBestelling): BestellingAanmakenResponse =
+        throw NotImplementedError()
+
+    override suspend fun getLocaties(): LocatiesResponse = throw NotImplementedError()
+
+    override suspend fun getOpeningsurenVanLocatie(locatieId: Int): OpeningsurenResponse =
+        throw NotImplementedError()
+
+    override suspend fun login(loginRequest: Login): LoginResponse = throw NotImplementedError()
+
+    override suspend fun logout(): LogoutResponse = throw NotImplementedError()
+
+    override suspend fun maakGebruiker(gebruiker: NieuweGebruiker): GebruikerAanmakenResponse =
+        throw NotImplementedError()
 }

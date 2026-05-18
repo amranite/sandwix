@@ -8,6 +8,7 @@ data class Sandwich(
     val description: String,
     val ingredients: List<String>,
     val price: BigDecimal,
+    val imageUrl: String = "",
     val extras: List<Extra> = emptyList(),
 )
 
@@ -54,6 +55,7 @@ val sampleSandwiches = listOf(
         description = "Grilled chicken, bacon, tomato, lettuce and house mayo on a crisp baguette.",
         ingredients = listOf("Chicken", "Bacon", "Tomato", "Lettuce", "House mayo"),
         price = BigDecimal("6.90"),
+        imageUrl = "",
         extras = sampleExtras,
     ),
     Sandwich(
@@ -62,6 +64,7 @@ val sampleSandwiches = listOf(
         description = "Mozzarella, tomato, basil pesto and roasted pine nuts.",
         ingredients = listOf("Mozzarella", "Tomato", "Basil pesto", "Pine nuts"),
         price = BigDecimal("5.80"),
+        imageUrl = "",
         extras = sampleExtras,
     ),
     Sandwich(
@@ -70,6 +73,7 @@ val sampleSandwiches = listOf(
         description = "Tuna salad, cheddar, pickled onion and cucumber, toasted warm.",
         ingredients = listOf("Tuna", "Cheddar", "Pickled onion", "Cucumber"),
         price = BigDecimal("6.40"),
+        imageUrl = "",
         extras = sampleExtras,
     ),
     Sandwich(
@@ -78,6 +82,7 @@ val sampleSandwiches = listOf(
         description = "Hummus, grilled vegetables, rocket and lemon dressing.",
         ingredients = listOf("Hummus", "Grilled vegetables", "Rocket", "Lemon dressing"),
         price = BigDecimal("5.50"),
+        imageUrl = "",
         extras = sampleExtras,
     ),
 )

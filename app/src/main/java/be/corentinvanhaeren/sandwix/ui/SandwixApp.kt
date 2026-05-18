@@ -3,7 +3,6 @@ package be.corentinvanhaeren.sandwix.ui
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -28,7 +27,6 @@ import be.corentinvanhaeren.sandwix.model.CartItem
 import be.corentinvanhaeren.sandwix.model.CustomerOrder
 import be.corentinvanhaeren.sandwix.model.sampleLocations
 import be.corentinvanhaeren.sandwix.model.sampleOrders
-import be.corentinvanhaeren.sandwix.model.sampleSandwiches
 import be.corentinvanhaeren.sandwix.network.SandwixApi
 import be.corentinvanhaeren.sandwix.ui.components.SandwixBottomBar
 import be.corentinvanhaeren.sandwix.ui.components.SandwixTopBar
@@ -38,6 +36,7 @@ import be.corentinvanhaeren.sandwix.ui.screens.cart.CartScreen
 import be.corentinvanhaeren.sandwix.ui.screens.checkout.CheckoutScreen
 import be.corentinvanhaeren.sandwix.ui.screens.confirmation.ConfirmationScreen
 import be.corentinvanhaeren.sandwix.ui.screens.detail.SandwichDetailScreen
+import be.corentinvanhaeren.sandwix.ui.screens.detail.SandwichDetailViewModel
 import be.corentinvanhaeren.sandwix.ui.screens.home.HomeScreen
 import be.corentinvanhaeren.sandwix.ui.screens.home.HomeViewModel
 import be.corentinvanhaeren.sandwix.ui.screens.login.LoginScreen
@@ -48,6 +47,7 @@ import be.corentinvanhaeren.sandwix.ui.screens.profile.ProfileScreen
 import be.corentinvanhaeren.sandwix.ui.screens.register.RegisterScreen
 import be.corentinvanhaeren.sandwix.ui.screens.register.RegisterViewModel
 import be.corentinvanhaeren.sandwix.ui.theme.SandwixTheme
+import be.corentinvanhaeren.sandwix.data.SandwixRepository
 import be.corentinvanhaeren.sandwix.data.TokenStore
 import be.corentinvanhaeren.sandwix.network.SandwixApiService
 
@@ -56,6 +56,7 @@ fun SandwixApp() {
     val context = LocalContext.current.applicationContext
     val tokenStore = remember { TokenStore(context) }
     val apiService = remember { SandwixApi.create(context) }
+    val repository = remember { SandwixRepository(apiService) }
 
     val navController = rememberNavController()
 
@@ -195,6 +196,7 @@ fun SandwixApp() {
                 rol = responseRol
             },
             apiService = apiService,
+            repository = repository,
             startDestination = startDestination,
         )
     }
@@ -215,6 +217,7 @@ private fun SandwixNavHost(
     rol: String?,
     onLoginSuccess: (String, Int, String) -> Unit,
     apiService: SandwixApiService,
+    repository: SandwixRepository,
     startDestination: String,
 ) {
     NavHost(
@@ -294,7 +297,7 @@ private fun SandwixNavHost(
             val homeViewModel: HomeViewModel = viewModel(
                 factory = ViewModelFactory {
                     HomeViewModel(
-                        apiService = apiService
+                        repository = repository
                     )
                 }
             )
@@ -311,8 +314,8 @@ private fun SandwixNavHost(
                 homeUiState = homeUiState,
                 onQueryUpdate = homeViewModel::onQueryUpdate,
                 onRetry = homeViewModel::getBroodjes,
-                onBroodjeClick = { broodje ->
-                    navController.navigate(Route.detailRoute(/*broodje.broodjeId*/1))
+                onSandwichClick = { sandwich ->
+                    navController.navigate(Route.detailRoute(sandwich.id))
                 },
             )
         }
@@ -329,13 +332,21 @@ private fun SandwixNavHost(
                 ?.getInt(Route.SANDWICH_ID_ARG)
                 ?: return@composable
 
-            val sandwich = sampleSandwiches.firstOrNull { sandwich ->
-                sandwich.id == sandwichId
-            } ?: return@composable
+            val detailViewModel: SandwichDetailViewModel = viewModel(
+                key = "sandwich-detail-$sandwichId",
+                factory = ViewModelFactory {
+                    SandwichDetailViewModel(
+                        sandwichId = sandwichId,
+                        repository = repository,
+                    )
+                }
+            )
+            val detailUiState by detailViewModel.uiState.collectAsState()
 
             SandwichDetailScreen(
                 contentPadding = contentPadding,
-                sandwich = sandwich,
+                detailUiState = detailUiState,
+                onRetry = detailViewModel::loadSandwich,
                 onAddToCart = { item ->
                     cart.add(item)
                     onNavigateToMainTab(Route.Cart)

@@ -37,7 +37,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import be.corentinvanhaeren.sandwix.R
-import be.corentinvanhaeren.sandwix.model.Broodje
+import be.corentinvanhaeren.sandwix.model.Sandwich
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import coil.compose.AsyncImage
@@ -50,12 +50,12 @@ internal fun HomeScreen(
     homeUiState: HomeUiState,
     onQueryUpdate: (String) -> Unit,
     onRetry: () -> Unit,
-    onBroodjeClick: (Broodje) -> Unit,
+    onSandwichClick: (Sandwich) -> Unit,
 ) {
     val isRefreshing = homeUiState.apiState is HomeApiState.Loading
 
-    val filtered = homeUiState.broodjes.filter { broodje ->
-        broodje.naam.contains(homeUiState.query, ignoreCase = true)
+    val filtered = homeUiState.sandwiches.filter { sandwich ->
+        sandwich.name.contains(homeUiState.query, ignoreCase = true)
     }
 
     PullToRefreshBox(
@@ -128,7 +128,8 @@ internal fun HomeScreen(
                 is HomeApiState.Error -> {
                     item {
                         ErrorCard(
-                            message = homeUiState.errorMessage,
+                            message = (homeUiState.apiState as? HomeApiState.Error)?.message
+                                ?: homeUiState.errorMessage,
                             onRetry = onRetry
                         )
                     }
@@ -137,12 +138,12 @@ internal fun HomeScreen(
                 is HomeApiState.Success -> {
                     items(
                         items = filtered,
-                        key = { broodje -> broodje.broodjeId },
-                    ) { broodje ->
-                        BroodjeCard(
-                            broodje = broodje,
+                        key = { sandwich -> sandwich.id },
+                    ) { sandwich ->
+                        SandwichCard(
+                            sandwich = sandwich,
                             onClick = {
-                                onBroodjeClick(broodje)
+                                onSandwichClick(sandwich)
                             },
                         )
                     }
@@ -214,8 +215,8 @@ internal fun DeliveryNotice() {
 }
 
 @Composable
-internal fun BroodjeCard(
-    broodje: Broodje,
+internal fun SandwichCard(
+    sandwich: Sandwich,
     onClick: () -> Unit,
 ) {
     Card(
@@ -232,14 +233,14 @@ internal fun BroodjeCard(
             horizontalArrangement = Arrangement.spacedBy(16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            BroodjeImage(broodje = broodje)
+            SandwichImage(sandwich = sandwich)
 
             Column(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 Text(
-                    text = broodje.naam,
+                    text = sandwich.name,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                 )
@@ -251,7 +252,7 @@ internal fun BroodjeCard(
                 )
 
                 Text(
-                    text = "€ ${broodje.basisPrijs}",
+                    text = "€ ${sandwich.price}",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary,
@@ -261,21 +262,21 @@ internal fun BroodjeCard(
     }
 }
 @Composable
-internal fun BroodjeImage(
-    broodje: Broodje,
+internal fun SandwichImage(
+    sandwich: Sandwich,
     modifier: Modifier = Modifier,
 ) {
-    if (broodje.afbeeldingUrl.isBlank()) {
+    if (sandwich.imageUrl.isBlank()) {
         SandwichIcon(modifier = modifier)
         return
     }
 
     AsyncImage(
         model = ImageRequest.Builder(context = LocalContext.current)
-            .data(broodje.afbeeldingUrl)
+            .data(sandwich.imageUrl)
             .crossfade(true)
             .build(),
-        contentDescription = "Foto van ${broodje.naam}",
+        contentDescription = "Foto van ${sandwich.name}",
         contentScale = ContentScale.Crop,
         modifier = modifier
             .size(88.dp)
@@ -301,6 +302,7 @@ internal fun SandwichIcon(
         )
     }
 }
+
 /*
 @Preview(showBackground = true, showSystemUi = true)
 @Composable
@@ -357,4 +359,4 @@ private fun HomeScreenPreviewDark() {
         }
     }
 }
- */
+*/

@@ -1,9 +1,9 @@
 package be.corentinvanhaeren.sandwix.ui.screens.home
 
-import be.corentinvanhaeren.sandwix.model.Broodje
+import be.corentinvanhaeren.sandwix.model.Sandwich
 
 data class HomeUiState(
-    val broodjes: List<Broodje> = emptyList(),
+    val sandwiches: List<Sandwich> = emptyList(),
     val query: String = "",
     val apiState: HomeApiState = HomeApiState.Loading,
     val errorMessage: String = ""
