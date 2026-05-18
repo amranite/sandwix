@@ -46,10 +46,16 @@ import be.corentinvanhaeren.sandwix.ui.screens.orders.OrdersScreen
 import be.corentinvanhaeren.sandwix.ui.screens.profile.ProfileScreen
 import be.corentinvanhaeren.sandwix.ui.screens.register.RegisterScreen
 import be.corentinvanhaeren.sandwix.ui.screens.register.RegisterViewModel
+import be.corentinvanhaeren.sandwix.ui.screens.employee.EmployeeOrderDetailScreen
+import be.corentinvanhaeren.sandwix.ui.screens.employee.EmployeeOrdersScreen
+import be.corentinvanhaeren.sandwix.ui.screens.employee.EmployeeProfileScreen
+import be.corentinvanhaeren.sandwix.ui.screens.employee.EmployeeScanScreen
 import be.corentinvanhaeren.sandwix.ui.theme.SandwixTheme
 import be.corentinvanhaeren.sandwix.data.SandwixRepository
 import be.corentinvanhaeren.sandwix.data.TokenStore
 import be.corentinvanhaeren.sandwix.network.SandwixApiService
+import be.corentinvanhaeren.sandwix.ui.navigation.EmployeeTab
+import be.corentinvanhaeren.sandwix.ui.components.SandwixEmployeeBottomBar
 
 @Composable
 fun SandwixApp() {
@@ -64,10 +70,15 @@ fun SandwixApp() {
     var gebruikerId by rememberSaveable { mutableStateOf(tokenStore.getGebruikerId()) }
     var rol by rememberSaveable { mutableStateOf(tokenStore.getRol()) }
 
-    val startDestination = if (tokenStore.isLoggedIn()) {
-        Route.Home.routeName
-    } else {
-        Route.Login.routeName
+    fun isEmployeeRole(value: String?): Boolean {
+        return value.equals("medewerker", ignoreCase = true) ||
+                value.equals("employee", ignoreCase = true)
+    }
+
+    val startDestination = when {
+        !tokenStore.isLoggedIn() -> Route.Login.routeName
+        isEmployeeRole(rol) -> Route.EmployeeOrders.routeName
+        else -> Route.Home.routeName
     }
 
     val cart = remember { mutableStateListOf<CartItem>() }
@@ -83,13 +94,20 @@ fun SandwixApp() {
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route ?: Route.Login.routeName
 
-    val selectedTab = MainTab.entries.firstOrNull { tab ->
-        tab.route.routeName == currentRoute
+    val selectedCustomerTab = MainTab.entries.firstOrNull { tab ->
+        tab.route.routeName == currentRoute ||
+                tab.route == Route.Orders && currentRoute == Route.OrderDetail.routeName
+    }
+
+    val selectedEmployeeTab = EmployeeTab.entries.firstOrNull { tab ->
+        tab.route.routeName == currentRoute ||
+                tab.route == Route.EmployeeOrders && currentRoute == Route.EmployeeOrderDetail.routeName
     }
 
     val title = when (currentRoute) {
         Route.Login.routeName -> stringResource(Route.Login.titleRes)
         Route.Register.routeName -> stringResource(Route.Register.titleRes)
+
         Route.Home.routeName -> stringResource(Route.Home.titleRes)
         Route.Detail.routeName -> stringResource(Route.Detail.titleRes)
         Route.Cart.routeName -> stringResource(Route.Cart.titleRes)
@@ -108,6 +126,21 @@ fun SandwixApp() {
         }
 
         Route.Profile.routeName -> stringResource(Route.Profile.titleRes)
+
+        Route.EmployeeOrders.routeName -> stringResource(Route.EmployeeOrders.titleRes)
+        Route.EmployeeScan.routeName -> stringResource(Route.EmployeeScan.titleRes)
+        Route.EmployeeProfile.routeName -> stringResource(Route.EmployeeProfile.titleRes)
+
+        Route.EmployeeOrderDetail.routeName -> {
+            val orderId = backStackEntry?.arguments?.getInt(Route.ORDER_ID_ARG)
+
+            if (orderId != null) {
+                stringResource(R.string.order_detail_title, orderId)
+            } else {
+                stringResource(Route.EmployeeOrderDetail.titleRes)
+            }
+        }
+
         else -> stringResource(R.string.app_name_display)
     }
 
@@ -116,9 +149,10 @@ fun SandwixApp() {
         Route.Detail.routeName,
         Route.Checkout.routeName,
         Route.OrderDetail.routeName,
+        Route.EmployeeOrderDetail.routeName,
     )
 
-    fun navigateToMainTab(route: Route) {
+    fun navigateToCustomerTab(route: Route) {
         navController.navigate(route.routeName) {
             popUpTo(Route.Home.routeName) {
                 saveState = true
@@ -128,8 +162,24 @@ fun SandwixApp() {
         }
     }
 
-    fun navigateAfterLoginOrRegister() {
-        navController.navigate(Route.Home.routeName) {
+    fun navigateToEmployeeTab(route: Route) {
+        navController.navigate(route.routeName) {
+            popUpTo(Route.EmployeeOrders.routeName) {
+                saveState = true
+            }
+            launchSingleTop = true
+            restoreState = true
+        }
+    }
+
+    fun navigateAfterLoginOrRegister(loginRol: String) {
+        val destination = if (isEmployeeRole(loginRol)) {
+            Route.EmployeeOrders
+        } else {
+            Route.Home
+        }
+
+        navController.navigate(destination.routeName) {
             popUpTo(Route.Login.routeName) {
                 inclusive = true
             }
@@ -138,6 +188,12 @@ fun SandwixApp() {
     }
 
     fun logout() {
+        val startRoute = if (isEmployeeRole(rol)) {
+            Route.EmployeeOrders.routeName
+        } else {
+            Route.Home.routeName
+        }
+
         tokenStore.clearSession()
 
         token = null
@@ -145,7 +201,7 @@ fun SandwixApp() {
         rol = null
 
         navController.navigate(Route.Login.routeName) {
-            popUpTo(Route.Home.routeName) {
+            popUpTo(startRoute) {
                 inclusive = true
             }
             launchSingleTop = true
@@ -164,11 +220,20 @@ fun SandwixApp() {
             )
         },
         bottomBar = {
-            selectedTab?.let { tab ->
-                SandwixBottomBar(
-                    selectedTab = tab,
-                    onTabSelected = ::navigateToMainTab,
-                )
+            if (isEmployeeRole(rol)) {
+                selectedEmployeeTab?.let { tab ->
+                    SandwixEmployeeBottomBar(
+                        selectedTab = tab,
+                        onTabSelected = ::navigateToEmployeeTab,
+                    )
+                }
+            } else {
+                selectedCustomerTab?.let { tab ->
+                    SandwixBottomBar(
+                        selectedTab = tab,
+                        onTabSelected = ::navigateToCustomerTab,
+                    )
+                }
             }
         },
     ) { innerPadding ->
@@ -179,7 +244,8 @@ fun SandwixApp() {
             orders = orders,
             lastOrderId = lastOrderId,
             onLastOrderIdChange = { lastOrderId = it },
-            onNavigateToMainTab = ::navigateToMainTab,
+            onNavigateToCustomerTab = ::navigateToCustomerTab,
+            onNavigateToEmployeeTab = ::navigateToEmployeeTab,
             onNavigateAfterLoginOrRegister = ::navigateAfterLoginOrRegister,
             onLogout = ::logout,
             gebruikerId = gebruikerId,
@@ -188,7 +254,7 @@ fun SandwixApp() {
                 tokenStore.saveSession(
                     token = responseToken,
                     gebruikerId = responseGebruikerId,
-                    rol = responseRol
+                    rol = responseRol,
                 )
 
                 token = responseToken
@@ -210,8 +276,9 @@ private fun SandwixNavHost(
     orders: MutableList<CustomerOrder>,
     lastOrderId: Int,
     onLastOrderIdChange: (Int) -> Unit,
-    onNavigateToMainTab: (Route) -> Unit,
-    onNavigateAfterLoginOrRegister: () -> Unit,
+    onNavigateToCustomerTab: (Route) -> Unit,
+    onNavigateToEmployeeTab: (Route) -> Unit,
+    onNavigateAfterLoginOrRegister: (String) -> Unit,
     onLogout: () -> Unit,
     gebruikerId: Int?,
     rol: String?,
@@ -248,7 +315,7 @@ private fun SandwixNavHost(
                             responseRol
                         )
 
-                        onNavigateAfterLoginOrRegister()
+                        onNavigateAfterLoginOrRegister(responseRol)
                     }
                 },
                 onRegister = {
@@ -349,7 +416,7 @@ private fun SandwixNavHost(
                 onRetry = detailViewModel::loadSandwich,
                 onAddToCart = { item ->
                     cart.add(item)
-                    onNavigateToMainTab(Route.Cart)
+                    onNavigateToCustomerTab(Route.Cart)
                 },
             )
         }
@@ -359,7 +426,7 @@ private fun SandwixNavHost(
                 contentPadding = contentPadding,
                 cartItems = cart,
                 onContinueShopping = {
-                    onNavigateToMainTab(Route.Home)
+                    onNavigateToCustomerTab(Route.Home)
                 },
                 onCheckout = {
                     navController.navigate(Route.Checkout.routeName)
@@ -427,10 +494,10 @@ private fun SandwixNavHost(
                 contentPadding = contentPadding,
                 order = order,
                 onHome = {
-                    onNavigateToMainTab(Route.Home)
+                    onNavigateToCustomerTab(Route.Home)
                 },
                 onOrders = {
-                    onNavigateToMainTab(Route.Orders)
+                    onNavigateToCustomerTab(Route.Orders)
                 },
             )
         }
@@ -443,7 +510,7 @@ private fun SandwixNavHost(
                     navController.navigate(Route.orderDetailRoute(order.id))
                 },
                 onHome = {
-                    onNavigateToMainTab(Route.Home)
+                    onNavigateToCustomerTab(Route.Home)
                 },
             )
         }
@@ -468,7 +535,7 @@ private fun SandwixNavHost(
                 contentPadding = contentPadding,
                 order = order,
                 onHome = {
-                    onNavigateToMainTab(Route.Home)
+                    onNavigateToCustomerTab(Route.Home)
                 },
             )
         }
@@ -476,6 +543,66 @@ private fun SandwixNavHost(
         composable(route = Route.Profile.routeName) {
             ProfileScreen(
                 contentPadding = contentPadding,
+                onLogout = onLogout,
+            )
+        }
+
+        composable(route = Route.EmployeeOrders.routeName) {
+            EmployeeOrdersScreen(
+                contentPadding = contentPadding,
+                orders = orders,
+                onOrderClick = { order ->
+                    navController.navigate(Route.employeeOrderDetailRoute(order.id))
+                },
+            )
+        }
+
+        composable(
+            route = Route.EmployeeOrderDetail.routeName,
+            arguments = listOf(
+                navArgument(Route.ORDER_ID_ARG) {
+                    type = NavType.IntType
+                },
+            ),
+        ) { backStackEntry ->
+            val orderId = backStackEntry.arguments
+                ?.getInt(Route.ORDER_ID_ARG)
+                ?: return@composable
+
+            val order = orders.firstOrNull { it.id == orderId } ?: return@composable
+
+            EmployeeOrderDetailScreen(
+                contentPadding = contentPadding,
+                order = order,
+                onStatusSave = { updatedOrder, newStatus ->
+                    val index = orders.indexOfFirst { it.id == updatedOrder.id }
+                    if (index != -1) {
+                        orders[index] = updatedOrder.copy(status = newStatus)
+                    }
+                    navController.navigateUp()
+                },
+            )
+        }
+
+        composable(route = Route.EmployeeScan.routeName) {
+            EmployeeScanScreen(
+                contentPadding = contentPadding,
+                onStartScan = { /* TODO: Implement scan */ },
+                onSearchOrder = { code ->
+                    val order = orders.firstOrNull { it.pickupCode == code }
+                    if (order != null) {
+                        navController.navigate(Route.employeeOrderDetailRoute(order.id))
+                    }
+                },
+            )
+        }
+
+        composable(route = Route.EmployeeProfile.routeName) {
+            EmployeeProfileScreen(
+                contentPadding = contentPadding,
+                name = "Medewerker",
+                email = "medewerker@sandwix.be",
+                onPersonalDataClick = { },
                 onLogout = onLogout,
             )
         }
