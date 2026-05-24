@@ -59,6 +59,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.ui.graphics.Color
 
 import androidx.compose.ui.res.painterResource
 
@@ -221,5 +222,98 @@ internal fun PickupCodeCard(order: CustomerOrder) {
             Text(order.pickupCode, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
             Text(stringResource(R.string.show_code_at_pickup), color = MaterialTheme.colorScheme.onPrimaryContainer, textAlign = TextAlign.Center)
         }
+    }
+}
+
+@Composable
+internal fun EmployeeErrorCard(
+    message: String,
+    onRetry: () -> Unit,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.errorContainer,
+        ),
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text(
+                text = message,
+                color = MaterialTheme.colorScheme.onErrorContainer,
+                fontWeight = FontWeight.Bold,
+            )
+
+            Button(onClick = onRetry) {
+                Text("Opnieuw proberen")
+            }
+        }
+    }
+}
+
+@Composable
+internal fun EmployeeStatusPill(
+    status: String,
+) {
+    val colors = employeeStatusColors(status)
+
+    Surface(
+        shape = CircleShape,
+        color = colors.first,
+    ) {
+        Text(
+            text = status,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Bold,
+            color = colors.second,
+        )
+    }
+}
+
+@Composable
+private fun employeeStatusColors(
+    status: String,
+): Pair<Color, Color> {
+    return when (status.trim().lowercase()) {
+        "klaar" -> {
+            MaterialTheme.colorScheme.tertiaryContainer to
+                    MaterialTheme.colorScheme.onTertiaryContainer
+        }
+
+        "afgehaald" -> {
+            MaterialTheme.colorScheme.secondaryContainer to
+                    MaterialTheme.colorScheme.onSecondaryContainer
+        }
+
+        "geannuleerd" -> {
+            MaterialTheme.colorScheme.errorContainer to
+                    MaterialTheme.colorScheme.onErrorContainer
+        }
+
+        "nieuw" -> {
+            MaterialTheme.colorScheme.primaryContainer to
+                    MaterialTheme.colorScheme.onPrimaryContainer
+        }
+
+        else -> {
+            MaterialTheme.colorScheme.primary.copy(alpha = 0.14f) to
+                    MaterialTheme.colorScheme.primary
+        }
+    }
+}
+
+internal fun displayStatus(
+    status: String,
+): String {
+    return when (status.trim().lowercase()) {
+        "new", "nieuw" -> "Nieuw"
+        "in_preparation", "preparing", "in_bereiding", "in bereiding" -> "In bereiding"
+        "ready", "klaar" -> "Klaar"
+        "completed", "picked_up", "afgehaald" -> "Afgehaald"
+        "cancelled", "canceled", "geannuleerd" -> "Geannuleerd"
+        else -> status.ifBlank { "Nieuw" }
     }
 }

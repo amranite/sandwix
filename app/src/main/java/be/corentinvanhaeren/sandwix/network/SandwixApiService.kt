@@ -26,7 +26,9 @@ import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.POST
 import retrofit2.http.Path
-
+import be.corentinvanhaeren.sandwix.model.BestellingStatusUpdateRequest
+import be.corentinvanhaeren.sandwix.model.BestellingStatusUpdateResponse
+import retrofit2.http.PUT
 private const val baseUrl = "https://corentinvanhaeren.be/project/api/"
 
 val SandwixJson = Json {
@@ -97,6 +99,16 @@ interface SandwixApiService {
     suspend fun maakGebruiker(
         @Body gebruiker: NieuweGebruiker
     ): GebruikerAanmakenResponse
+
+    //employee
+    @GET("bestellingen/vandaag")
+    suspend fun getBestellingenVandaag(): BestellingenGebruikerResponse
+
+    @PUT("bestellingen/{bestelling_id}")
+    suspend fun updateBestellingStatus(
+        @Path("bestelling_id") bestellingId: Int,
+        @Body request: BestellingStatusUpdateRequest
+    ): BestellingStatusUpdateResponse
 }
 
 

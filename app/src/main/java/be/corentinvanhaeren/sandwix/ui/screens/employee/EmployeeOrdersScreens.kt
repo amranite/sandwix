@@ -19,12 +19,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Divider
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -59,6 +57,7 @@ import be.corentinvanhaeren.sandwix.ui.theme.SandwixTheme
 import be.corentinvanhaeren.sandwix.ui.util.formatPrice
 import be.corentinvanhaeren.sandwix.ui.util.lineTotal
 import be.corentinvanhaeren.sandwix.ui.util.totalPrice
+import java.math.BigDecimal
 
 private val employeeStatuses = listOf(
     "Nieuw",
@@ -380,7 +379,7 @@ private fun EmployeeSmallTag(text: String) {
 }
 
 @Composable
-private fun EmployeeTotalPaidCard(total: java.math.BigDecimal) {
+private fun EmployeeTotalPaidCard(total: BigDecimal) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(

@@ -3,6 +3,7 @@ package be.corentinvanhaeren.sandwix.ui
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -47,7 +48,7 @@ import be.corentinvanhaeren.sandwix.ui.screens.profile.ProfileScreen
 import be.corentinvanhaeren.sandwix.ui.screens.register.RegisterScreen
 import be.corentinvanhaeren.sandwix.ui.screens.register.RegisterViewModel
 import be.corentinvanhaeren.sandwix.ui.screens.employee.EmployeeOrderDetailScreen
-import be.corentinvanhaeren.sandwix.ui.screens.employee.EmployeeOrdersScreen
+import be.corentinvanhaeren.sandwix.ui.screens.employee.orders.EmployeeOrdersScreen
 import be.corentinvanhaeren.sandwix.ui.screens.employee.EmployeeProfileScreen
 import be.corentinvanhaeren.sandwix.ui.screens.employee.EmployeeScanScreen
 import be.corentinvanhaeren.sandwix.ui.theme.SandwixTheme
@@ -56,7 +57,8 @@ import be.corentinvanhaeren.sandwix.data.TokenStore
 import be.corentinvanhaeren.sandwix.network.SandwixApiService
 import be.corentinvanhaeren.sandwix.ui.navigation.EmployeeTab
 import be.corentinvanhaeren.sandwix.ui.components.SandwixEmployeeBottomBar
-
+import be.corentinvanhaeren.sandwix.ui.screens.employee.orders.EmployeeOrdersViewModel
+import be.corentinvanhaeren.sandwix.ui.screens.employee.orderdetails.EmployeeOrderDetailViewModel
 @Composable
 fun SandwixApp() {
     val context = LocalContext.current.applicationContext
@@ -548,11 +550,28 @@ private fun SandwixNavHost(
         }
 
         composable(route = Route.EmployeeOrders.routeName) {
+            val employeeOrdersViewModel: EmployeeOrdersViewModel = viewModel(
+                factory = ViewModelFactory {
+                    EmployeeOrdersViewModel(
+                        apiService = apiService,
+                    )
+                }
+            )
+
+            val employeeOrdersUiState by employeeOrdersViewModel.uiState.collectAsState()
+
+            LaunchedEffect(Unit) {
+                employeeOrdersViewModel.getBestellingenVandaag()
+            }
+
             EmployeeOrdersScreen(
                 contentPadding = contentPadding,
-                orders = orders,
+                uiState = employeeOrdersUiState,
+                onRetry = employeeOrdersViewModel::getBestellingenVandaag,
                 onOrderClick = { order ->
-                    navController.navigate(Route.employeeOrderDetailRoute(order.id))
+                    navController.navigate(
+                        Route.employeeOrderDetailRoute(order.bestellingId)
+                    )
                 },
             )
         }
@@ -569,21 +588,25 @@ private fun SandwixNavHost(
                 ?.getInt(Route.ORDER_ID_ARG)
                 ?: return@composable
 
-            val order = orders.firstOrNull { it.id == orderId } ?: return@composable
+            val employeeOrderDetailViewModel: EmployeeOrderDetailViewModel = viewModel(
+                key = "employee-order-detail-$orderId",
+                factory = ViewModelFactory {
+                    EmployeeOrderDetailViewModel(
+                        bestellingId = orderId,
+                        apiService = apiService,
+                    )
+                }
+            )
+
+            val employeeOrderDetailUiState by employeeOrderDetailViewModel.uiState.collectAsState()
 
             EmployeeOrderDetailScreen(
                 contentPadding = contentPadding,
-                order = order,
-                onStatusSave = { updatedOrder, newStatus ->
-                    val index = orders.indexOfFirst { it.id == updatedOrder.id }
-                    if (index != -1) {
-                        orders[index] = updatedOrder.copy(status = newStatus)
-                    }
-                    navController.navigateUp()
-                },
+                uiState = employeeOrderDetailUiState,
+                onRetry = employeeOrderDetailViewModel::loadOrder,
+                onStatusSave = employeeOrderDetailViewModel::updateStatus,
             )
         }
-
         composable(route = Route.EmployeeScan.routeName) {
             EmployeeScanScreen(
                 contentPadding = contentPadding,
