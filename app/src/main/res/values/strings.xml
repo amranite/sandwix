@@ -74,4 +74,8 @@
     <string name="cd_increase">Increase quantity</string>
     <string name="cd_remove">Remove item</string>
     <string name="loading">Loading</string>
+    <string name="employee_orders_title">Bestellingen</string>
+    <string name="employee_order_detail_title">Bestelling</string>
+    <string name="employee_scan_title">Afhaalcode scannen</string>
+    <string name="employee_profile_title">Mijn Account</string>
 </resources>

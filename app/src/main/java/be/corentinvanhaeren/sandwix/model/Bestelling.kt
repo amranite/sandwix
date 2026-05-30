@@ -178,3 +178,17 @@ data class NieuweBestellingIngredient(
 
     val actie: String
 )
+
+// status updaten van een bestelliing
+@Serializable
+data class BestellingStatusUpdateRequest(
+    val status: String
+)
+
+@Serializable
+data class BestellingStatusUpdateResponse(
+    val status: Int,
+    val message: String? = null,
+    val data: String? = null,
+    val id: Int? = null
+)

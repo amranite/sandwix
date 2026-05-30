@@ -55,6 +55,26 @@ internal enum class Route(
     Profile(
         routeName = "profile",
         titleRes = R.string.nav_profile,
+    ),
+
+    EmployeeOrders(
+        routeName = "employeeOrders",
+        titleRes = R.string.employee_orders_title,
+    ),
+
+    EmployeeOrderDetail(
+        routeName = "employeeOrderDetail/{orderId}",
+        titleRes = R.string.employee_order_detail_title,
+    ),
+
+    EmployeeScan(
+        routeName = "employeeScan",
+        titleRes = R.string.employee_scan_title,
+    ),
+
+    EmployeeProfile(
+        routeName = "employeeProfile",
+        titleRes = R.string.employee_profile_title,
     );
 
     companion object {
@@ -71,6 +91,10 @@ internal enum class Route(
 
         fun orderDetailRoute(orderId: Int): String {
             return "orderDetail/$orderId"
+        }
+
+        fun employeeOrderDetailRoute(orderId: Int): String {
+            return "employeeOrderDetail/$orderId"
         }
     }
 }
