@@ -193,8 +193,10 @@ internal fun SectionTitle(text: String) {
 
 internal fun StatusPill(status: String) {
     val color = when {
-        status.contains("ready", ignoreCase = true) -> OrderGreen
-        status.contains("completed", ignoreCase = true) -> OrderBlue
+        status.contains("ready", ignoreCase = true) ||
+                status.contains("klaar", ignoreCase = true) -> OrderGreen
+        status.contains("completed", ignoreCase = true) ||
+                status.contains("afgehaald", ignoreCase = true) -> OrderBlue
         else -> OrderOrange
     }
     Surface(shape = CircleShape, color = color.copy(alpha = 0.15f)) {
