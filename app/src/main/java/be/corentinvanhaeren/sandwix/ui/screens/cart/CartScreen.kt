@@ -91,7 +91,13 @@ internal fun CartScreen(
         } else {
             items(
                 items = cartItems,
-                key = { item -> item.sandwich.id },
+                key = { item ->
+                    listOf(
+                        item.sandwich.id.toString(),
+                        item.selectedExtras.joinToString("-") { it.id.toString() },
+                        item.note,
+                    ).joinToString(":")
+                },
             ) { item ->
                 CartItemCard(
                     item = item,

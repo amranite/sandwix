@@ -41,11 +41,13 @@
     <string name="checkout_title">Checkout</string>
     <string name="your_order">Your order</string>
     <string name="choose_location">Choose a location</string>
+    <string name="choose_pickup_date">Choose pickup date</string>
     <string name="choose_pickup_time">Choose pickup time</string>
     <string name="location_closed">This location is closed today.</string>
     <string name="order_note_label">Order note</string>
     <string name="order_note_placeholder">For example: keep warm, call on arrival...</string>
-    <string name="confirm_and_pay">Confirm and pay</string>
+    <string name="confirm_order">Confirm order</string>
+    <string name="placing_order">Placing order...</string>
     <string name="order_confirmed">Order confirmed</string>
     <string name="order_success">Your order has been placed successfully.</string>
     <string name="pickup_code">Pickup code</string>
@@ -68,6 +70,7 @@
     <string name="address_value">Address: %1$s</string>
     <string name="status_value">Status: %1$s</string>
     <string name="selected_time">Selected time: %1$s</string>
+    <string name="selected_date">Selected date: %1$s</string>
     <string name="total">Total</string>
     <string name="cd_back">Back</string>
     <string name="cd_decrease">Decrease quantity</string>

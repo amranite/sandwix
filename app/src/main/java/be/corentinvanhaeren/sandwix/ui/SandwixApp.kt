@@ -6,7 +6,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -26,7 +25,6 @@ import androidx.navigation.navArgument
 import be.corentinvanhaeren.sandwix.R
 import be.corentinvanhaeren.sandwix.model.CartItem
 import be.corentinvanhaeren.sandwix.model.CustomerOrder
-import be.corentinvanhaeren.sandwix.model.sampleLocations
 import be.corentinvanhaeren.sandwix.model.sampleOrders
 import be.corentinvanhaeren.sandwix.network.SandwixApi
 import be.corentinvanhaeren.sandwix.ui.components.SandwixBottomBar
@@ -35,6 +33,7 @@ import be.corentinvanhaeren.sandwix.ui.navigation.MainTab
 import be.corentinvanhaeren.sandwix.ui.navigation.Route
 import be.corentinvanhaeren.sandwix.ui.screens.cart.CartScreen
 import be.corentinvanhaeren.sandwix.ui.screens.checkout.CheckoutScreen
+import be.corentinvanhaeren.sandwix.ui.screens.checkout.CheckoutViewModel
 import be.corentinvanhaeren.sandwix.ui.screens.confirmation.ConfirmationScreen
 import be.corentinvanhaeren.sandwix.ui.screens.detail.SandwichDetailScreen
 import be.corentinvanhaeren.sandwix.ui.screens.detail.SandwichDetailViewModel
@@ -90,8 +89,6 @@ fun SandwixApp() {
             addAll(sampleOrders())
         }
     }
-
-    var lastOrderId by rememberSaveable { mutableIntStateOf(1100) }
 
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route ?: Route.Login.routeName
@@ -244,8 +241,6 @@ fun SandwixApp() {
             contentPadding = innerPadding,
             cart = cart,
             orders = orders,
-            lastOrderId = lastOrderId,
-            onLastOrderIdChange = { lastOrderId = it },
             onNavigateToCustomerTab = ::navigateToCustomerTab,
             onNavigateToEmployeeTab = ::navigateToEmployeeTab,
             onNavigateAfterLoginOrRegister = ::navigateAfterLoginOrRegister,
@@ -276,8 +271,6 @@ private fun SandwixNavHost(
     contentPadding: PaddingValues,
     cart: MutableList<CartItem>,
     orders: MutableList<CustomerOrder>,
-    lastOrderId: Int,
-    onLastOrderIdChange: (Int) -> Unit,
     onNavigateToCustomerTab: (Route) -> Unit,
     onNavigateToEmployeeTab: (Route) -> Unit,
     onNavigateAfterLoginOrRegister: (String) -> Unit,
@@ -417,7 +410,20 @@ private fun SandwixNavHost(
                 detailUiState = detailUiState,
                 onRetry = detailViewModel::loadSandwich,
                 onAddToCart = { item ->
-                    cart.add(item)
+                    val existingIndex = cart.indexOfFirst { existingItem ->
+                        existingItem.sandwich.id == item.sandwich.id &&
+                                existingItem.selectedExtras == item.selectedExtras &&
+                                existingItem.note == item.note
+                    }
+
+                    if (existingIndex == -1) {
+                        cart.add(item)
+                    } else {
+                        val existingItem = cart[existingIndex]
+                        cart[existingIndex] = existingItem.copy(
+                            quantity = existingItem.quantity + item.quantity
+                        )
+                    }
                     onNavigateToCustomerTab(Route.Cart)
                 },
             )
@@ -451,27 +457,33 @@ private fun SandwixNavHost(
         }
 
         composable(route = Route.Checkout.routeName) {
+            val currentGebruikerId = gebruikerId ?: return@composable
+            val checkoutViewModel: CheckoutViewModel = viewModel(
+                factory = ViewModelFactory {
+                    CheckoutViewModel(
+                        gebruikerId = currentGebruikerId,
+                        apiService = apiService,
+                    )
+                }
+            )
+            val checkoutUiState by checkoutViewModel.uiState.collectAsState()
+
             CheckoutScreen(
                 contentPadding = contentPadding,
                 cartItems = cart,
-                locations = sampleLocations,
-                onConfirm = { location, pickupTime, _ ->
-                    val newOrderId = lastOrderId + 1
-                    onLastOrderIdChange(newOrderId)
-
-                    val order = CustomerOrder(
-                        id = newOrderId,
-                        pickupCode = "SWX-${newOrderId.toString().takeLast(3)}",
-                        status = "Confirmed",
-                        pickupLocation = location,
-                        pickupTime = pickupTime,
-                        items = cart.toList(),
-                    )
-
+                uiState = checkoutUiState,
+                onRetry = checkoutViewModel::loadLocations,
+                onLocationSelected = checkoutViewModel::selectLocation,
+                onDateSelected = checkoutViewModel::selectDate,
+                onTimeSelected = checkoutViewModel::selectTime,
+                onNoteUpdate = checkoutViewModel::updateNote,
+                onConfirm = {
+                    checkoutViewModel.submitOrder(cart.toList()) { order ->
                     orders.add(0, order)
                     cart.clear()
 
                     navController.navigate(Route.confirmationRoute(order.id))
+                    }
                 },
             )
         }
