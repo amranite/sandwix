@@ -3,6 +3,7 @@ package be.corentinvanhaeren.sandwix.ui.screens.orders
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -20,83 +21,100 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import be.corentinvanhaeren.sandwix.R
-import be.corentinvanhaeren.sandwix.model.CustomerOrder
-import be.corentinvanhaeren.sandwix.model.sampleOrders
-import be.corentinvanhaeren.sandwix.ui.components.CheckoutLine
 import be.corentinvanhaeren.sandwix.ui.components.EmptyState
-import be.corentinvanhaeren.sandwix.ui.components.PickupCodeCard
-import be.corentinvanhaeren.sandwix.ui.components.SandwixBottomBar
-import be.corentinvanhaeren.sandwix.ui.components.SandwixTopBar
 import be.corentinvanhaeren.sandwix.ui.components.SectionTitle
 import be.corentinvanhaeren.sandwix.ui.components.StatusPill
 import be.corentinvanhaeren.sandwix.ui.components.TotalCard
-import be.corentinvanhaeren.sandwix.ui.navigation.MainTab
-import be.corentinvanhaeren.sandwix.ui.theme.SandwixTheme
+import be.corentinvanhaeren.sandwix.ui.screens.home.ErrorCard
 import be.corentinvanhaeren.sandwix.ui.util.formatPrice
-import be.corentinvanhaeren.sandwix.ui.util.totalPrice
+import java.math.BigDecimal
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun OrdersScreen(
     contentPadding: PaddingValues,
-    orders: List<CustomerOrder>,
-    onOrderClick: (CustomerOrder) -> Unit,
+    uiState: CustomerOrdersUiState,
+    onOrderClick: (CustomerOrderSummary) -> Unit,
     onHome: () -> Unit,
+    onRetry: () -> Unit,
 ) {
-    LazyColumn(
+    PullToRefreshBox(
+        isRefreshing = uiState.apiState is CustomerOrdersApiState.Loading,
+        onRefresh = onRetry,
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background),
-        contentPadding = PaddingValues(
-            start = 20.dp,
-            top = contentPadding.calculateTopPadding() + 24.dp,
-            end = 20.dp,
-            bottom = contentPadding.calculateBottomPadding() + 24.dp,
-        ),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        item {
-            Text(
-                text = stringResource(R.string.orders_title),
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-            )
-        }
-
-        if (orders.isEmpty()) {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(
+                start = 20.dp,
+                top = contentPadding.calculateTopPadding() + 24.dp,
+                end = 20.dp,
+                bottom = contentPadding.calculateBottomPadding() + 24.dp,
+            ),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
             item {
-                EmptyState(
-                    icon = Icons.AutoMirrored.Filled.List,
-                    title = stringResource(R.string.no_orders),
-                    body = stringResource(R.string.no_orders_body),
-                    onAction = onHome,
-                    actionLabel = stringResource(R.string.back_to_home),
+                Text(
+                    text = stringResource(R.string.orders_title),
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
                 )
             }
-        } else {
-            items(
-                items = orders,
-                key = { order -> order.id },
-            ) { order ->
-                OrderCard(
-                    order = order,
-                    onClick = {
-                        onOrderClick(order)
-                    },
-                )
+
+            when (uiState.apiState) {
+                is CustomerOrdersApiState.Loading -> item {
+                    LoadingBox()
+                }
+
+                is CustomerOrdersApiState.Error -> item {
+                    ErrorCard(
+                        message = uiState.errorMessage,
+                        onRetry = onRetry,
+                    )
+                }
+
+                is CustomerOrdersApiState.Success -> {
+                    if (uiState.orders.isEmpty()) {
+                        item {
+                            EmptyState(
+                                icon = Icons.AutoMirrored.Filled.List,
+                                title = stringResource(R.string.no_orders),
+                                body = stringResource(R.string.no_orders_body),
+                                onAction = onHome,
+                                actionLabel = stringResource(R.string.back_to_home),
+                            )
+                        }
+                    } else {
+                        items(
+                            items = uiState.orders,
+                            key = { order -> order.id },
+                        ) { order ->
+                            OrderCard(
+                                order = order,
+                                onClick = {
+                                    onOrderClick(order)
+                                },
+                            )
+                        }
+                    }
+                }
             }
         }
     }
@@ -105,7 +123,51 @@ internal fun OrdersScreen(
 @Composable
 internal fun OrderDetailScreen(
     contentPadding: PaddingValues,
-    order: CustomerOrder,
+    uiState: CustomerOrderDetailUiState,
+    onRetry: () -> Unit,
+    onHome: () -> Unit,
+) {
+    val order = uiState.order
+
+    when {
+        order != null -> OrderDetailContent(
+            contentPadding = contentPadding,
+            order = order,
+            onHome = onHome,
+        )
+
+        uiState.apiState is CustomerOrderDetailApiState.Loading -> {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(contentPadding),
+                contentAlignment = Alignment.Center,
+            ) {
+                CircularProgressIndicator()
+            }
+        }
+
+        else -> {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(contentPadding)
+                    .padding(20.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                ErrorCard(
+                    message = uiState.errorMessage,
+                    onRetry = onRetry,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun OrderDetailContent(
+    contentPadding: PaddingValues,
+    order: CustomerOrderDetail,
     onHome: () -> Unit,
 ) {
     LazyColumn(
@@ -121,11 +183,20 @@ internal fun OrderDetailScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         item {
-            PickupCodeCard(order)
+            PickupCodeCard(order.pickupCode)
         }
 
         item {
             InfoCard(order)
+        }
+
+        if (!order.note.isNullOrBlank()) {
+            item {
+                Text(
+                    text = stringResource(R.string.note_value, order.note),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
 
         item {
@@ -133,11 +204,11 @@ internal fun OrderDetailScreen(
         }
 
         items(order.items) { item ->
-            CheckoutLine(item)
+            OrderLine(item)
         }
 
         item {
-            TotalCard(order.items.totalPrice())
+            TotalCard(order.total)
 
             Spacer(Modifier.height(16.dp))
 
@@ -152,8 +223,8 @@ internal fun OrderDetailScreen(
 }
 
 @Composable
-internal fun OrderCard(
-    order: CustomerOrder,
+private fun OrderCard(
+    order: CustomerOrderSummary,
     onClick: () -> Unit,
 ) {
     Card(
@@ -181,22 +252,25 @@ internal fun OrderCard(
                 StatusPill(order.status)
             }
 
-            Text(
-                text = stringResource(R.string.pickup_code_value, order.pickupCode),
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            if (order.pickupCode.isNotBlank()) {
+                Text(
+                    text = stringResource(R.string.pickup_code_value, order.pickupCode),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
 
             Text(
                 text = stringResource(
-                    R.string.pickup_location_time,
+                    R.string.pickup_location_date_time,
                     order.pickupLocation.name,
+                    order.pickupDate,
                     order.pickupTime,
                 ),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
 
             Text(
-                text = formatPrice(order.items.totalPrice()),
+                text = formatPrice(order.total),
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary,
             )
@@ -205,8 +279,8 @@ internal fun OrderCard(
 }
 
 @Composable
-internal fun InfoCard(
-    order: CustomerOrder,
+private fun InfoCard(
+    order: CustomerOrderDetail,
 ) {
     Card(
         colors = CardDefaults.cardColors(
@@ -220,7 +294,11 @@ internal fun InfoCard(
         ) {
             InfoRow(
                 icon = Icons.Filled.LocationOn,
-                text = stringResource(R.string.address_value, order.pickupLocation.address),
+                text = if (order.pickupLocation.address.isBlank()) {
+                    order.pickupLocation.name
+                } else {
+                    stringResource(R.string.address_value, order.pickupLocation.address)
+                },
             )
 
             InfoRow(
@@ -230,14 +308,91 @@ internal fun InfoCard(
 
             InfoRow(
                 icon = Icons.Filled.Check,
-                text = stringResource(R.string.selected_time, order.pickupTime),
+                text = stringResource(
+                    R.string.pickup_date_time,
+                    order.pickupDate,
+                    order.pickupTime,
+                ),
             )
         }
     }
 }
 
 @Composable
-internal fun InfoRow(
+private fun OrderLine(item: CustomerOrderLine) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.Top,
+    ) {
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(3.dp),
+        ) {
+            Text(
+                text = stringResource(R.string.quantity_name, item.quantity, item.name),
+                fontWeight = FontWeight.SemiBold,
+            )
+
+            item.ingredients.forEach { ingredient ->
+                Text(
+                    text = stringResource(
+                        R.string.ingredient_change,
+                        ingredient.action,
+                        ingredient.name,
+                    ),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
+            if (!item.note.isNullOrBlank()) {
+                Text(
+                    text = stringResource(R.string.note_value, item.note),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+
+        Text(
+            text = formatPrice(item.lineTotal()),
+            fontWeight = FontWeight.Bold,
+        )
+    }
+}
+
+@Composable
+private fun PickupCodeCard(pickupCode: String) {
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer,
+        ),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(
+            modifier = Modifier.padding(18.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text(
+                text = stringResource(R.string.pickup_code),
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
+            )
+
+            Text(
+                text = pickupCode,
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
+            )
+
+            Text(
+                text = stringResource(R.string.show_code_at_pickup),
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
+            )
+        }
+    }
+}
+
+@Composable
+private fun InfoRow(
     icon: ImageVector,
     text: String,
 ) {
@@ -255,79 +410,21 @@ internal fun InfoRow(
     }
 }
 
-@Preview(showBackground = true)
 @Composable
-private fun OrdersScreenPreview() {
-    SandwixTheme {
-        Scaffold(
-            topBar = {
-                SandwixTopBar(
-                    title = stringResource(R.string.nav_orders),
-                )
-            },
-            bottomBar = {
-                SandwixBottomBar(
-                    selectedTab = MainTab.Orders,
-                    onTabSelected = {},
-                )
-            },
-        ) { innerPadding ->
-            OrdersScreen(
-                contentPadding = innerPadding,
-                orders = sampleOrders(),
-                onOrderClick = {},
-                onHome = {},
-            )
-        }
+private fun LoadingBox() {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(24.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        CircularProgressIndicator()
     }
 }
 
-@Preview(showBackground = true, showSystemUi = true)
-@Composable
-private fun OrderDetailScreenPreview() {
-    val order = sampleOrders().first()
-
-    SandwixTheme(
-        darkTheme = false
-    ) {
-        Scaffold(
-            topBar = {
-                SandwixTopBar(
-                    title = stringResource(R.string.order_detail_title, order.id),
-                    onBack = {},
-                )
-            },
-        ) { innerPadding ->
-            OrderDetailScreen(
-                contentPadding = innerPadding,
-                order = order,
-                onHome = {},
-            )
-        }
+private fun CustomerOrderLine.lineTotal(): BigDecimal {
+    val extras = ingredients.fold(BigDecimal.ZERO) { total, ingredient ->
+        total + ingredient.extraPrice
     }
-}
-
-@Preview(showBackground = true, showSystemUi = true)
-@Composable
-private fun OrderDetailScreenPreviewDark() {
-    val order = sampleOrders().first()
-
-    SandwixTheme(
-        darkTheme = true
-    ) {
-        Scaffold(
-            topBar = {
-                SandwixTopBar(
-                    title = stringResource(R.string.order_detail_title, order.id),
-                    onBack = {},
-                )
-            },
-        ) { innerPadding ->
-            OrderDetailScreen(
-                contentPadding = innerPadding,
-                order = order,
-                onHome = {},
-            )
-        }
-    }
+    return (unitPrice + extras).multiply(BigDecimal(quantity))
 }

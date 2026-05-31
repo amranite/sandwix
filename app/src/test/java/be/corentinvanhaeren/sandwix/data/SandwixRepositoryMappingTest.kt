@@ -9,6 +9,8 @@ import be.corentinvanhaeren.sandwix.model.OpeningsurenResponse
 import be.corentinvanhaeren.sandwix.model.BestellingAanmakenResponse
 import be.corentinvanhaeren.sandwix.model.BestellingDetailsResponse
 import be.corentinvanhaeren.sandwix.model.BestellingenGebruikerResponse
+import be.corentinvanhaeren.sandwix.model.BestellingStatusUpdateRequest
+import be.corentinvanhaeren.sandwix.model.BestellingStatusUpdateResponse
 import be.corentinvanhaeren.sandwix.model.GebruikerAanmakenResponse
 import be.corentinvanhaeren.sandwix.model.LocatiesResponse
 import be.corentinvanhaeren.sandwix.model.Login
@@ -150,4 +152,12 @@ private class FakeSandwixApiService : SandwixApiService {
 
     override suspend fun maakGebruiker(gebruiker: NieuweGebruiker): GebruikerAanmakenResponse =
         throw NotImplementedError()
+
+    override suspend fun getBestellingenVandaag(): BestellingenGebruikerResponse =
+        throw NotImplementedError()
+
+    override suspend fun updateBestellingStatus(
+        bestellingId: Int,
+        request: BestellingStatusUpdateRequest,
+    ): BestellingStatusUpdateResponse = throw NotImplementedError()
 }

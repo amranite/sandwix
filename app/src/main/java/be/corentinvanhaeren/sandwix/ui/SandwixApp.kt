@@ -44,6 +44,8 @@ import be.corentinvanhaeren.sandwix.ui.screens.login.LoginScreen
 import be.corentinvanhaeren.sandwix.ui.screens.login.LoginViewModel
 import be.corentinvanhaeren.sandwix.ui.screens.orders.OrderDetailScreen
 import be.corentinvanhaeren.sandwix.ui.screens.orders.OrdersScreen
+import be.corentinvanhaeren.sandwix.ui.screens.orders.CustomerOrderDetailViewModel
+import be.corentinvanhaeren.sandwix.ui.screens.orders.CustomerOrdersViewModel
 import be.corentinvanhaeren.sandwix.ui.screens.profile.ProfileScreen
 import be.corentinvanhaeren.sandwix.ui.screens.register.RegisterScreen
 import be.corentinvanhaeren.sandwix.ui.screens.register.RegisterViewModel
@@ -505,15 +507,27 @@ private fun SandwixNavHost(
         }
 
         composable(route = Route.Orders.routeName) {
+            val currentGebruikerId = gebruikerId ?: return@composable
+            val customerOrdersViewModel: CustomerOrdersViewModel = viewModel(
+                factory = ViewModelFactory {
+                    CustomerOrdersViewModel(
+                        gebruikerId = currentGebruikerId,
+                        apiService = apiService,
+                    )
+                }
+            )
+            val customerOrdersUiState by customerOrdersViewModel.uiState.collectAsState()
+
             OrdersScreen(
                 contentPadding = contentPadding,
-                orders = orders,
+                uiState = customerOrdersUiState,
                 onOrderClick = { order ->
                     navController.navigate(Route.orderDetailRoute(order.id))
                 },
                 onHome = {
                     onNavigateToCustomerTab(Route.Home)
                 },
+                onRetry = customerOrdersViewModel::loadOrders,
             )
         }
 
@@ -529,13 +543,21 @@ private fun SandwixNavHost(
                 ?.getInt(Route.ORDER_ID_ARG)
                 ?: return@composable
 
-            val order = orders.firstOrNull { order ->
-                order.id == orderId
-            } ?: return@composable
+            val customerOrderDetailViewModel: CustomerOrderDetailViewModel = viewModel(
+                key = "customer-order-detail-$orderId",
+                factory = ViewModelFactory {
+                    CustomerOrderDetailViewModel(
+                        bestellingId = orderId,
+                        apiService = apiService,
+                    )
+                }
+            )
+            val customerOrderDetailUiState by customerOrderDetailViewModel.uiState.collectAsState()
 
             OrderDetailScreen(
                 contentPadding = contentPadding,
-                order = order,
+                uiState = customerOrderDetailUiState,
+                onRetry = customerOrderDetailViewModel::loadOrder,
                 onHome = {
                     onNavigateToCustomerTab(Route.Home)
                 },

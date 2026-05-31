@@ -65,6 +65,9 @@
     <string name="order_number">Order #%1$d</string>
     <string name="pickup_code_value">Code: %1$s</string>
     <string name="pickup_location_time">%1$s · %2$s</string>
+    <string name="pickup_location_date_time">%1$s · %2$s · %3$s</string>
+    <string name="pickup_date_time">Pickup: %1$s at %2$s</string>
+    <string name="ingredient_change">%1$s: %2$s</string>
     <string name="address_value">Address: %1$s</string>
     <string name="status_value">Status: %1$s</string>
     <string name="selected_time">Selected time: %1$s</string>
