@@ -12,6 +12,7 @@ import be.corentinvanhaeren.sandwix.model.PickupLocation
 import be.corentinvanhaeren.sandwix.network.SandwixApiService
 import java.text.SimpleDateFormat
 import java.util.Calendar
+import java.util.Date
 import java.util.Locale
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -27,6 +28,7 @@ class CheckoutViewModel(
     val uiState: StateFlow<CheckoutUiState> = _uiState.asStateFlow()
 
     private var openingHours = emptyList<Openingsuur>()
+    private var pendingCreatedOrder: PendingCreatedOrder? = null
 
     init {
         loadLocations()
@@ -119,6 +121,11 @@ class CheckoutViewModel(
         cartItems: List<CartItem>,
         onSuccess: (CustomerOrder) -> Unit,
     ) {
+        pendingCreatedOrder?.let { pendingOrder ->
+            loadCreatedOrder(pendingOrder, onSuccess)
+            return
+        }
+
         val state = _uiState.value
         val location = state.locations.firstOrNull { it.id == state.selectedLocationId }
         val date = state.selectedDate
@@ -156,30 +163,20 @@ class CheckoutViewModel(
                     return@launch
                 }
 
-                val detailResponse = apiService.getBestellingDetails(orderId)
-                val details = detailResponse.data
-
-                if (detailResponse.status !in 200..299 || details.afhaalCode.isNullOrBlank()) {
-                    showSubmitError("Bestelling is geplaatst, maar de afhaalcode kon niet opgehaald worden.")
-                    return@launch
-                }
-
-                _uiState.update {
-                    it.copy(submitState = CheckoutSubmitState.Idle)
-                }
-                onSuccess(
-                    CustomerOrder(
-                        id = orderId,
-                        pickupCode = details.afhaalCode,
-                        status = details.status,
-                        pickupLocation = location,
-                        pickupTime = details.afhaalTijd.removeSuffix(":00"),
-                        items = cartItems,
-                    )
+                val pendingOrder = PendingCreatedOrder(
+                    id = orderId,
+                    location = location,
+                    items = cartItems,
                 )
+                pendingCreatedOrder = pendingOrder
+                completeCreatedOrder(pendingOrder, onSuccess)
             } catch (exception: Exception) {
                 showSubmitError(
-                    exception.localizedMessage ?: "Bestelling kon niet geplaatst worden."
+                    if (pendingCreatedOrder == null) {
+                        exception.localizedMessage ?: "Bestelling kon niet geplaatst worden."
+                    } else {
+                        "Bestelling is geplaatst, maar de afhaalcode kon niet opgehaald worden."
+                    }
                 )
             }
         }
@@ -248,14 +245,67 @@ class CheckoutViewModel(
             ?: return emptyList()
         val start = openingHour.openTijd.toMinutes()
         val end = openingHour.sluitTijd.toMinutes()
+        val today = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
+        val now = Calendar.getInstance()
+        val nowInMinutes = now.get(Calendar.HOUR_OF_DAY) * 60 + now.get(Calendar.MINUTE)
 
         return buildList {
             var minutes = start
             while (minutes < end) {
-                add("%02d:%02d".format(minutes / 60, minutes % 60))
+                if (date != today || minutes > nowInMinutes) {
+                    add("%02d:%02d".format(minutes / 60, minutes % 60))
+                }
                 minutes += SLOT_MINUTES
             }
         }
+    }
+
+    private fun loadCreatedOrder(
+        pendingOrder: PendingCreatedOrder,
+        onSuccess: (CustomerOrder) -> Unit,
+    ) {
+        viewModelScope.launch {
+            _uiState.update {
+                it.copy(
+                    submitState = CheckoutSubmitState.Loading,
+                    errorMessage = "",
+                )
+            }
+
+            try {
+                completeCreatedOrder(pendingOrder, onSuccess)
+            } catch (_: Exception) {
+                showSubmitError("Bestelling is geplaatst, maar de afhaalcode kon niet opgehaald worden.")
+            }
+        }
+    }
+
+    private suspend fun completeCreatedOrder(
+        pendingOrder: PendingCreatedOrder,
+        onSuccess: (CustomerOrder) -> Unit,
+    ) {
+        val detailResponse = apiService.getBestellingDetails(pendingOrder.id)
+        val details = detailResponse.data
+
+        if (detailResponse.status !in 200..299 || details.afhaalCode.isNullOrBlank()) {
+            showSubmitError("Bestelling is geplaatst, maar de afhaalcode kon niet opgehaald worden.")
+            return
+        }
+
+        pendingCreatedOrder = null
+        _uiState.update {
+            it.copy(submitState = CheckoutSubmitState.Idle)
+        }
+        onSuccess(
+            CustomerOrder(
+                id = pendingOrder.id,
+                pickupCode = details.afhaalCode,
+                status = details.status,
+                pickupLocation = pendingOrder.location,
+                pickupTime = details.afhaalTijd.removeSuffix(":00"),
+                items = pendingOrder.items,
+            )
+        )
     }
 
     private fun CartItem.toNieuweBestellingItem() = NieuweBestellingItem(
@@ -309,4 +359,10 @@ class CheckoutViewModel(
         const val DATE_WINDOW_DAYS = 7
         const val SLOT_MINUTES = 15
     }
+
+    private data class PendingCreatedOrder(
+        val id: Int,
+        val location: PickupLocation,
+        val items: List<CartItem>,
+    )
 }
