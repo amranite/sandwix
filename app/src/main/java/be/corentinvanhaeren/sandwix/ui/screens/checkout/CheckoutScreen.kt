@@ -3,6 +3,7 @@ package be.corentinvanhaeren.sandwix.ui.screens.checkout
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -21,16 +22,13 @@ import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -48,6 +46,7 @@ import be.corentinvanhaeren.sandwix.ui.components.CheckoutLine
 import be.corentinvanhaeren.sandwix.ui.components.SandwixTopBar
 import be.corentinvanhaeren.sandwix.ui.components.SectionTitle
 import be.corentinvanhaeren.sandwix.ui.components.TotalCard
+import be.corentinvanhaeren.sandwix.ui.screens.home.ErrorCard
 import be.corentinvanhaeren.sandwix.ui.theme.SandwixTheme
 import be.corentinvanhaeren.sandwix.ui.util.totalPrice
 
@@ -56,21 +55,66 @@ import be.corentinvanhaeren.sandwix.ui.util.totalPrice
 internal fun CheckoutScreen(
     contentPadding: PaddingValues,
     cartItems: List<CartItem>,
-    locations: List<PickupLocation>,
-    onConfirm: (PickupLocation, String, String) -> Unit,
+    uiState: CheckoutUiState,
+    onRetry: () -> Unit,
+    onLocationSelected: (Int) -> Unit,
+    onDateSelected: (String) -> Unit,
+    onTimeSelected: (String) -> Unit,
+    onNoteUpdate: (String) -> Unit,
+    onConfirm: () -> Unit,
 ) {
-    var selectedLocationId by rememberSaveable {
-        mutableStateOf(
-            locations.firstOrNull { it.isOpen }?.id ?: locations.first().id
+    when (uiState.apiState) {
+        is CheckoutApiState.Loading -> {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(contentPadding),
+                contentAlignment = Alignment.Center,
+            ) {
+                CircularProgressIndicator()
+            }
+        }
+
+        is CheckoutApiState.Error -> {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(contentPadding)
+                    .padding(20.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                ErrorCard(
+                    message = uiState.errorMessage,
+                    onRetry = onRetry,
+                )
+            }
+        }
+
+        is CheckoutApiState.Success -> CheckoutContent(
+            contentPadding = contentPadding,
+            cartItems = cartItems,
+            uiState = uiState,
+            onLocationSelected = onLocationSelected,
+            onDateSelected = onDateSelected,
+            onTimeSelected = onTimeSelected,
+            onNoteUpdate = onNoteUpdate,
+            onConfirm = onConfirm,
         )
     }
+}
 
-    var selectedTime by rememberSaveable { mutableStateOf("12:15") }
-    var note by rememberSaveable { mutableStateOf("") }
-
-    val selectedLocation = locations.first { it.id == selectedLocationId }
-    val times = listOf("11:45", "12:00", "12:15", "12:30", "12:45")
-
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun CheckoutContent(
+    contentPadding: PaddingValues,
+    cartItems: List<CartItem>,
+    uiState: CheckoutUiState,
+    onLocationSelected: (Int) -> Unit,
+    onDateSelected: (String) -> Unit,
+    onTimeSelected: (String) -> Unit,
+    onNoteUpdate: (String) -> Unit,
+    onConfirm: () -> Unit,
+) {
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -98,18 +142,42 @@ internal fun CheckoutScreen(
         item {
             SectionTitle(stringResource(R.string.choose_location))
 
-            locations.forEach { location ->
+            uiState.locations.forEach { location ->
                 LocationCard(
                     location = location,
-                    selected = selectedLocationId == location.id,
+                    selected = uiState.selectedLocationId == location.id,
                     onClick = {
-                        if (location.isOpen) {
-                            selectedLocationId = location.id
-                        }
+                        onLocationSelected(location.id)
                     },
                 )
 
                 Spacer(Modifier.height(8.dp))
+            }
+        }
+
+        item {
+            SectionTitle(stringResource(R.string.choose_pickup_date))
+
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                uiState.dates.forEach { date ->
+                    AssistChip(
+                        onClick = {
+                            onDateSelected(date.value)
+                        },
+                        label = {
+                            Text(
+                                if (date.value == uiState.selectedDate) {
+                                    stringResource(R.string.selected_date, date.label)
+                                } else {
+                                    date.label
+                                }
+                            )
+                        },
+                    )
+                }
             }
         }
 
@@ -120,14 +188,14 @@ internal fun CheckoutScreen(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                times.forEach { time ->
+                uiState.times.forEach { time ->
                     AssistChip(
                         onClick = {
-                            selectedTime = time
+                            onTimeSelected(time)
                         },
                         label = {
                             Text(
-                                if (time == selectedTime) {
+                                if (time == uiState.selectedTime) {
                                     stringResource(R.string.selected_time, time)
                                 } else {
                                     time
@@ -141,10 +209,8 @@ internal fun CheckoutScreen(
 
         item {
             OutlinedTextField(
-                value = note,
-                onValueChange = {
-                    note = it
-                },
+                value = uiState.note,
+                onValueChange = onNoteUpdate,
                 modifier = Modifier.fillMaxWidth(),
                 label = {
                     Text(stringResource(R.string.order_note_label))
@@ -158,17 +224,31 @@ internal fun CheckoutScreen(
 
             Spacer(Modifier.height(16.dp))
 
+            if (uiState.submitState is CheckoutSubmitState.Error) {
+                Text(
+                    text = uiState.errorMessage,
+                    color = MaterialTheme.colorScheme.error,
+                )
+
+                Spacer(Modifier.height(12.dp))
+            }
+
             Button(
-                onClick = {
-                    onConfirm(selectedLocation, selectedTime, note)
-                },
-                enabled = cartItems.isNotEmpty() && selectedLocation.isOpen,
+                onClick = onConfirm,
+                enabled = cartItems.isNotEmpty() &&
+                        uiState.selectedDate != null &&
+                        uiState.selectedTime != null &&
+                        uiState.submitState !is CheckoutSubmitState.Loading,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(54.dp),
             ) {
                 Text(
-                    text = stringResource(R.string.confirm_and_pay),
+                    text = if (uiState.submitState is CheckoutSubmitState.Loading) {
+                        stringResource(R.string.placing_order)
+                    } else {
+                        stringResource(R.string.confirm_order)
+                    },
                     fontWeight = FontWeight.Bold,
                 )
             }
@@ -262,8 +342,13 @@ private fun CheckoutScreenPreview() {
             CheckoutScreen(
                 contentPadding = innerPadding,
                 cartItems = cartItems,
-                locations = sampleLocations,
-                onConfirm = { _, _, _ -> },
+                uiState = previewCheckoutUiState(),
+                onRetry = {},
+                onLocationSelected = {},
+                onDateSelected = {},
+                onTimeSelected = {},
+                onNoteUpdate = {},
+                onConfirm = {},
             )
         }
     }
@@ -300,9 +385,24 @@ private fun CheckoutScreenPreviewDark() {
             CheckoutScreen(
                 contentPadding = innerPadding,
                 cartItems = cartItems,
-                locations = sampleLocations,
-                onConfirm = { _, _, _ -> },
+                uiState = previewCheckoutUiState(),
+                onRetry = {},
+                onLocationSelected = {},
+                onDateSelected = {},
+                onTimeSelected = {},
+                onNoteUpdate = {},
+                onConfirm = {},
             )
         }
     }
 }
+
+private fun previewCheckoutUiState() = CheckoutUiState(
+    locations = sampleLocations,
+    selectedLocationId = sampleLocations.first().id,
+    dates = listOf(PickupDateOption("2026-06-01", "ma 01/06")),
+    selectedDate = "2026-06-01",
+    times = listOf("12:00", "12:15", "12:30"),
+    selectedTime = "12:15",
+    apiState = CheckoutApiState.Success,
+)
