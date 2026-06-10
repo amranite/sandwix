@@ -58,6 +58,7 @@ import be.corentinvanhaeren.sandwix.data.TokenStore
 import be.corentinvanhaeren.sandwix.network.SandwixApiService
 import be.corentinvanhaeren.sandwix.ui.navigation.EmployeeTab
 import be.corentinvanhaeren.sandwix.ui.components.SandwixEmployeeBottomBar
+import be.corentinvanhaeren.sandwix.ui.screens.employee.EmployeeScanViewModel
 import be.corentinvanhaeren.sandwix.ui.screens.employee.orders.EmployeeOrdersViewModel
 import be.corentinvanhaeren.sandwix.ui.screens.employee.orderdetails.EmployeeOrderDetailViewModel
 @Composable
@@ -639,16 +640,28 @@ private fun SandwixNavHost(
                 uiState = employeeOrderDetailUiState,
                 onRetry = employeeOrderDetailViewModel::loadOrder,
                 onStatusSave = employeeOrderDetailViewModel::updateStatus,
+                onMeegegeven = employeeOrderDetailViewModel::markeerAlsMeegegeven,
             )
         }
         composable(route = Route.EmployeeScan.routeName) {
+            val employeeScanViewModel: EmployeeScanViewModel = viewModel(
+                factory = ViewModelFactory {
+                    EmployeeScanViewModel(
+                        apiService = apiService,
+                    )
+                }
+            )
+
+            val employeeScanUiState by employeeScanViewModel.uiState.collectAsState()
+
             EmployeeScanScreen(
                 contentPadding = contentPadding,
-                onStartScan = { /* TODO: Implement scan */ },
+                uiState = employeeScanUiState,
                 onSearchOrder = { code ->
-                    val order = orders.firstOrNull { it.pickupCode == code }
-                    if (order != null) {
-                        navController.navigate(Route.employeeOrderDetailRoute(order.id))
+                    employeeScanViewModel.zoekBestellingMetAfhaalCode(code) { bestelling ->
+                        navController.navigate(
+                            Route.employeeOrderDetailRoute(bestelling.bestellingId)
+                        )
                     }
                 },
             )

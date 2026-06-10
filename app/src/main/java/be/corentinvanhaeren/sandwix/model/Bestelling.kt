@@ -192,3 +192,35 @@ data class BestellingStatusUpdateResponse(
     val data: String? = null,
     val id: Int? = null
 )
+
+// bestelling afhalen
+@Serializable
+data class AfhaalCodeRequest(
+    @SerialName("afhaal_code")
+    val afhaalCode: String
+)
+
+@Serializable
+data class AfhalenRequest(
+    @SerialName("bestelling_id")
+    val bestellingId: Int,
+
+    @SerialName("afhaal_code")
+    val afhaalCode: String
+)
+
+@Serializable
+data class AfhalenResponse(
+    val code: Int? = null,
+    val status: Int,
+    val message: String? = null,
+    val data: AfhalenResult? = null
+)
+
+@Serializable
+data class AfhalenResult(
+    @SerialName("bestelling_id")
+    val bestellingId: Int,
+
+    val status: String
+)

@@ -2,6 +2,7 @@ package be.corentinvanhaeren.sandwix.ui.screens.employee.orderdetails
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import be.corentinvanhaeren.sandwix.model.AfhalenRequest
 import be.corentinvanhaeren.sandwix.model.BestellingStatusUpdateRequest
 import be.corentinvanhaeren.sandwix.network.SandwixApiService
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -143,6 +144,63 @@ class EmployeeOrderDetailViewModel(
             "afgehaald" -> "afgehaald"
             "geannuleerd" -> "geannuleerd"
             else -> status.trim().lowercase()
+        }
+    }
+
+    fun markeerAlsMeegegeven() {
+        val order = _uiState.value.order ?: return
+        val afhaalCode = order.afhaalCode ?: return
+
+        viewModelScope.launch {
+            _uiState.update {
+                it.copy(
+                    updateState = EmployeeStatusUpdateApiState.Loading,
+                    errorMessage = "",
+                )
+            }
+
+            try {
+                val response = apiService.markeerBestellingAfgehaald(
+                    request = AfhalenRequest(
+                        bestellingId = order.bestellingId,
+                        afhaalCode = afhaalCode
+                    )
+                )
+
+                val isSuccess = response.status in 200..299
+
+                if (isSuccess) {
+                    _uiState.update { currentState ->
+                        currentState.copy(
+                            order = currentState.order?.copy(
+                                status = response.data?.status ?: "afgehaald"
+                            ),
+                            updateState = EmployeeStatusUpdateApiState.Success,
+                            errorMessage = "",
+                        )
+                    }
+                } else {
+                    val message = response.message
+                        ?: "Bestelling kon niet als afgehaald gezet worden."
+
+                    _uiState.update {
+                        it.copy(
+                            updateState = EmployeeStatusUpdateApiState.Error(message),
+                            errorMessage = message,
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                val message = e.localizedMessage
+                    ?: "Bestelling kon niet als afgehaald gezet worden."
+
+                _uiState.update {
+                    it.copy(
+                        updateState = EmployeeStatusUpdateApiState.Error(message),
+                        errorMessage = message,
+                    )
+                }
+            }
         }
     }
 }

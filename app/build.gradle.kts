@@ -56,6 +56,8 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.coil.compose)
+    implementation(libs.core)
+    implementation(libs.zxing.android.embedded)
 
     // Retrofit
     implementation(libs.retrofit)

@@ -30,6 +30,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -49,14 +50,15 @@ import be.corentinvanhaeren.sandwix.ui.screens.employee.orderdetails.EmployeeOrd
 import be.corentinvanhaeren.sandwix.ui.screens.employee.orderdetails.EmployeeOrderDetailUiState
 import be.corentinvanhaeren.sandwix.ui.screens.employee.orderdetails.EmployeeStatusUpdateApiState
 import be.corentinvanhaeren.sandwix.ui.util.formatPrice
+import kotlinx.coroutines.delay
 import java.math.BigDecimal
 
 private val employeeStatuses = listOf(
     "Nieuw",
     "In bereiding",
     "Klaar",
-    "Afgehaald",
-    "Geannuleerd",
+    //"Afgehaald",
+    //"Geannuleerd",
 )
 
 @Composable
@@ -65,7 +67,8 @@ internal fun EmployeeOrderDetailScreen(
     uiState: EmployeeOrderDetailUiState,
     onRetry: () -> Unit,
     onStatusSave: (String) -> Unit,
-) {
+    onMeegegeven: () -> Unit,
+){
     val order = uiState.order
 
     when (uiState.apiState) {
@@ -119,6 +122,7 @@ internal fun EmployeeOrderDetailScreen(
                     updateState = uiState.updateState,
                     errorMessage = uiState.errorMessage,
                     onStatusSave = onStatusSave,
+                    onMeegegeven = onMeegegeven,
                 )
             }
         }
@@ -132,12 +136,29 @@ private fun EmployeeOrderDetailContent(
     updateState: EmployeeStatusUpdateApiState,
     errorMessage: String,
     onStatusSave: (String) -> Unit,
+    onMeegegeven: () -> Unit,
 ) {
-    var selectedStatus by rememberSaveable(order.bestellingId) {
-        mutableStateOf(displayStatus(order.status))
+    val savedStatus = displayStatus(order.status)
+
+    var selectedStatus by rememberSaveable(order.bestellingId, order.status) {
+        mutableStateOf(savedStatus)
     }
 
     val isSaving = updateState is EmployeeStatusUpdateApiState.Loading
+    val hasStatusChange = selectedStatus != savedStatus
+    val canMeegeven = savedStatus == "Klaar"
+    val isMeegegeven = savedStatus == "Afgehaald"
+    var showSavedMessage by rememberSaveable {
+        mutableStateOf(false)
+    }
+
+    LaunchedEffect(updateState) {
+        if (updateState is EmployeeStatusUpdateApiState.Success) {
+            showSavedMessage = true
+            delay(2500)
+            showSavedMessage = false
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -145,6 +166,16 @@ private fun EmployeeOrderDetailContent(
             .background(MaterialTheme.colorScheme.background)
             .padding(top = contentPadding.calculateTopPadding()),
     ) {
+        if (showSavedMessage) {
+            StatusSavedBanner(
+                modifier = Modifier.padding(
+                    start = 20.dp,
+                    top = 16.dp,
+                    end = 20.dp,
+                ),
+            )
+        }
+
         LazyColumn(
             modifier = Modifier.weight(1f),
             contentPadding = PaddingValues(
@@ -189,25 +220,21 @@ private fun EmployeeOrderDetailContent(
                 }
             }
 
-            if (updateState is EmployeeStatusUpdateApiState.Success) {
-                item {
-                    Text(
-                        text = "Status succesvol opgeslagen.",
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                }
-            }
         }
 
         EmployeeStatusUpdatePanel(
             selectedStatus = selectedStatus,
+            savedStatus = savedStatus,
             onStatusSelected = { newStatus ->
                 selectedStatus = newStatus
             },
             onSave = {
                 onStatusSave(selectedStatus)
             },
+            onMeegegeven = onMeegegeven,
+            canMeegeven = canMeegeven,
+            isMeegegeven = isMeegegeven,
+            canSave = hasStatusChange,
             isSaving = isSaving,
             modifier = Modifier.padding(
                 bottom = contentPadding.calculateBottomPadding(),
@@ -264,6 +291,29 @@ private fun EmployeeOrderInfoCard(
                 status = status,
             )
         }
+    }
+}
+
+@Composable
+private fun StatusSavedBanner(
+    modifier: Modifier = Modifier,
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer,
+        ),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 4.dp,
+        ),
+    ) {
+        Text(
+            text = "Status aangepast en opgeslagen.",
+            modifier = Modifier.padding(horizontal = 18.dp, vertical = 16.dp),
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onPrimaryContainer,
+        )
     }
 }
 
@@ -443,8 +493,13 @@ private fun EmployeeTotalPaidCard(
 @Composable
 private fun EmployeeStatusUpdatePanel(
     selectedStatus: String,
+    savedStatus: String,
     onStatusSelected: (String) -> Unit,
     onSave: () -> Unit,
+    onMeegegeven: () -> Unit,
+    canMeegeven: Boolean,
+    isMeegegeven: Boolean,
+    canSave: Boolean,
     isSaving: Boolean,
     modifier: Modifier = Modifier,
 ) {
@@ -467,6 +522,7 @@ private fun EmployeeStatusUpdatePanel(
 
             EmployeeStatusDropdown(
                 selectedStatus = selectedStatus,
+                savedStatus = savedStatus,
                 onStatusSelected = onStatusSelected,
                 modifier = Modifier.weight(1f),
             )
@@ -474,7 +530,7 @@ private fun EmployeeStatusUpdatePanel(
 
         Button(
             onClick = onSave,
-            enabled = !isSaving,
+            enabled = !isSaving && canSave,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(48.dp),
@@ -488,12 +544,37 @@ private fun EmployeeStatusUpdatePanel(
                 fontWeight = FontWeight.Bold,
             )
         }
+        Button(
+            onClick = onMeegegeven,
+            enabled = !isSaving && canMeegeven,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(48.dp),
+        ) {
+            Text(
+                text = "MEEGEGEVEN",
+                fontWeight = FontWeight.Bold,
+            )
+        }
+
+        if (isMeegegeven) {
+            Text(
+                text = "Deze bestelling is al meegegeven.",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        } else if (!canMeegeven) {
+            Text(
+                text = "Deze bestelling kan alleen meegegeven worden als de status 'klaar' is.",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
     }
 }
 
 @Composable
 private fun EmployeeStatusDropdown(
     selectedStatus: String,
+    savedStatus: String,
     onStatusSelected: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -526,17 +607,21 @@ private fun EmployeeStatusDropdown(
             },
             modifier = Modifier.fillMaxWidth(),
         ) {
-            employeeStatuses.forEach { status ->
-                DropdownMenuItem(
-                    text = {
-                        Text(status)
-                    },
-                    onClick = {
-                        onStatusSelected(status)
-                        expanded = false
-                    },
-                )
-            }
+            employeeStatuses
+                .filterNot { status ->
+                    status == selectedStatus || status == savedStatus
+                }
+                .forEach { status ->
+                    DropdownMenuItem(
+                        text = {
+                            Text(status)
+                        },
+                        onClick = {
+                            onStatusSelected(status)
+                            expanded = false
+                        },
+                    )
+                }
         }
     }
 }

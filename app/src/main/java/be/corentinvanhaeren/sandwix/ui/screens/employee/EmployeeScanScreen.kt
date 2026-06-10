@@ -1,5 +1,6 @@
 package be.corentinvanhaeren.sandwix.ui.screens.employee
 
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -17,6 +18,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -36,15 +38,31 @@ import androidx.compose.ui.unit.dp
 import be.corentinvanhaeren.sandwix.ui.components.SandwixEmployeeBottomBar
 import be.corentinvanhaeren.sandwix.ui.components.SandwixTopBar
 import be.corentinvanhaeren.sandwix.ui.navigation.EmployeeTab
+import be.corentinvanhaeren.sandwix.ui.scanner.PortraitQrCaptureActivity
 import be.corentinvanhaeren.sandwix.ui.theme.SandwixTheme
+import com.journeyapps.barcodescanner.ScanContract
+import com.journeyapps.barcodescanner.ScanOptions
 
 @Composable
 internal fun EmployeeScanScreen(
     contentPadding: PaddingValues,
-    onStartScan: () -> Unit,
+    uiState: EmployeeScanUiState,
     onSearchOrder: (String) -> Unit,
 ) {
-    var pickupCode by rememberSaveable { mutableStateOf("") }
+    var pickupCode by rememberSaveable {
+        mutableStateOf("")
+    }
+
+    val scanLauncher = rememberLauncherForActivityResult(
+        contract = ScanContract(),
+    ) { result ->
+        val scannedCode = result.contents
+
+        if (!scannedCode.isNullOrBlank()) {
+            pickupCode = scannedCode.trim().uppercase()
+            onSearchOrder(scannedCode.trim())
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -78,7 +96,18 @@ internal fun EmployeeScanScreen(
                 )
 
                 Button(
-                    onClick = onStartScan,
+                    onClick = {
+                        val options = ScanOptions().apply {
+                            setDesiredBarcodeFormats(ScanOptions.QR_CODE)
+                            setPrompt("Scan de QR-code van de klant")
+                            setBeepEnabled(true)
+                            setOrientationLocked(true)
+                            setCaptureActivity(PortraitQrCaptureActivity::class.java)
+                        }
+
+                        scanLauncher.launch(options)
+                    },
+                    enabled = !uiState.isLoading,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(50.dp),
@@ -87,6 +116,7 @@ internal fun EmployeeScanScreen(
                         imageVector = Icons.Filled.QrCodeScanner,
                         contentDescription = null,
                     )
+
                     Text(
                         text = "START SCAN",
                         modifier = Modifier.padding(start = 8.dp),
@@ -114,16 +144,22 @@ internal fun EmployeeScanScreen(
                 )
 
                 Text(
-                    text = "Vul de afhaalcode in.",
+                    text = "Vul de afhaalcode handmatig in als scannen niet lukt.",
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
 
                 OutlinedTextField(
                     value = pickupCode,
-                    onValueChange = { pickupCode = it.uppercase() },
+                    onValueChange = {
+                        pickupCode = it.uppercase()
+                    },
                     modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Afhaalcode") },
-                    placeholder = { Text("bv. 1234 of 60AF93") },
+                    label = {
+                        Text("Afhaalcode")
+                    },
+                    placeholder = {
+                        Text("bv. 1234 of 60AF93")
+                    },
                     leadingIcon = {
                         Icon(
                             imageVector = Icons.Filled.Search,
@@ -139,8 +175,10 @@ internal fun EmployeeScanScreen(
                 )
 
                 Button(
-                    onClick = { onSearchOrder(pickupCode.trim()) },
-                    enabled = pickupCode.isNotBlank(),
+                    onClick = {
+                        onSearchOrder(pickupCode.trim())
+                    },
+                    enabled = pickupCode.isNotBlank() && !uiState.isLoading,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(50.dp),
@@ -151,6 +189,23 @@ internal fun EmployeeScanScreen(
                     )
                 }
             }
+        }
+
+        if (uiState.isLoading) {
+            CircularProgressIndicator()
+            Text(
+                text = "Bestelling zoeken...",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontWeight = FontWeight.SemiBold,
+            )
+        }
+
+        if (uiState.errorMessage.isNotBlank()) {
+            Text(
+                text = uiState.errorMessage,
+                color = MaterialTheme.colorScheme.error,
+                fontWeight = FontWeight.SemiBold,
+            )
         }
     }
 }
@@ -172,7 +227,7 @@ private fun EmployeeScanScreenPreview() {
         ) { innerPadding ->
             EmployeeScanScreen(
                 contentPadding = innerPadding,
-                onStartScan = {},
+                uiState = EmployeeScanUiState(),
                 onSearchOrder = {},
             )
         }

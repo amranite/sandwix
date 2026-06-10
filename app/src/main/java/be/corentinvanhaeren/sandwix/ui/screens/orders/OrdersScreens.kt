@@ -37,13 +37,20 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import be.corentinvanhaeren.sandwix.R
 import be.corentinvanhaeren.sandwix.ui.components.EmptyState
+import be.corentinvanhaeren.sandwix.ui.components.QrCodeImage
 import be.corentinvanhaeren.sandwix.ui.components.SectionTitle
 import be.corentinvanhaeren.sandwix.ui.components.StatusPill
 import be.corentinvanhaeren.sandwix.ui.components.TotalCard
 import be.corentinvanhaeren.sandwix.ui.screens.home.ErrorCard
 import be.corentinvanhaeren.sandwix.ui.util.formatPrice
 import java.math.BigDecimal
-
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun OrdersScreen(
@@ -79,15 +86,19 @@ internal fun OrdersScreen(
             }
 
             when (uiState.apiState) {
-                is CustomerOrdersApiState.Loading -> item {
-                    LoadingBox()
+                is CustomerOrdersApiState.Loading -> {
+                    item {
+                        LoadingBox()
+                    }
                 }
 
-                is CustomerOrdersApiState.Error -> item {
-                    ErrorCard(
-                        message = uiState.errorMessage,
-                        onRetry = onRetry,
-                    )
+                is CustomerOrdersApiState.Error -> {
+                    item {
+                        ErrorCard(
+                            message = uiState.errorMessage,
+                            onRetry = onRetry,
+                        )
+                    }
                 }
 
                 is CustomerOrdersApiState.Success -> {
@@ -130,16 +141,19 @@ internal fun OrderDetailScreen(
     val order = uiState.order
 
     when {
-        order != null -> OrderDetailContent(
-            contentPadding = contentPadding,
-            order = order,
-            onHome = onHome,
-        )
+        order != null -> {
+            OrderDetailContent(
+                contentPadding = contentPadding,
+                order = order,
+                onHome = onHome,
+            )
+        }
 
         uiState.apiState is CustomerOrderDetailApiState.Loading -> {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.background)
                     .padding(contentPadding),
                 contentAlignment = Alignment.Center,
             ) {
@@ -151,6 +165,7 @@ internal fun OrderDetailScreen(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.background)
                     .padding(contentPadding)
                     .padding(20.dp),
                 contentAlignment = Alignment.Center,
@@ -170,6 +185,23 @@ private fun OrderDetailContent(
     order: CustomerOrderDetail,
     onHome: () -> Unit,
 ) {
+    var showPickupDialog by rememberSaveable {
+        mutableStateOf(false)
+    }
+
+    val canShowPickupCode =
+        order.status.equals("klaar", ignoreCase = true) &&
+                order.pickupCode.isNotBlank()
+
+    if (showPickupDialog) {
+        PickupCodeDialog(
+            pickupCode = order.pickupCode,
+            onDismiss = {
+                showPickupDialog = false
+            },
+        )
+    }
+
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -183,7 +215,19 @@ private fun OrderDetailContent(
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         item {
-            PickupCodeCard(order.pickupCode)
+            PickupCodeCard(
+                pickupCode = order.pickupCode,
+                canShowPickupCode = canShowPickupCode,
+                onShowPickupCode = {
+                    showPickupDialog = true
+                },
+            )
+        }
+
+        if (order.status.equals("afgehaald", ignoreCase = true)) {
+            item {
+                PickedUpCard()
+            }
         }
 
         item {
@@ -203,7 +247,9 @@ private fun OrderDetailContent(
             SectionTitle(stringResource(R.string.ordered_items))
         }
 
-        items(order.items) { item ->
+        items(
+            items = order.items,
+        ) { item ->
             OrderLine(item)
         }
 
@@ -220,6 +266,52 @@ private fun OrderDetailContent(
             }
         }
     }
+}
+
+@Composable
+private fun PickupCodeDialog(
+    pickupCode: String,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(
+                onClick = onDismiss,
+            ) {
+                Text("Sluiten")
+            }
+        },
+        title = {
+            Text(
+                text = "Afhaalcode",
+                fontWeight = FontWeight.Bold,
+            )
+        },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                Text(
+                    text = pickupCode,
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+
+                QrCodeImage(
+                    afhaalCode = pickupCode,
+                )
+
+                Text(
+                    text = "Laat deze QR-code scannen door de medewerker.",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        },
+    )
 }
 
 @Composable
@@ -254,7 +346,10 @@ private fun OrderCard(
 
             if (order.pickupCode.isNotBlank()) {
                 Text(
-                    text = stringResource(R.string.pickup_code_value, order.pickupCode),
+                    text = stringResource(
+                        R.string.pickup_code_value,
+                        order.pickupCode,
+                    ),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
@@ -279,6 +374,68 @@ private fun OrderCard(
 }
 
 @Composable
+private fun PickupQrCard(
+    pickupCode: String,
+) {
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface,
+        ),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(18.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text(
+                text = "Toon deze QR-code aan de medewerker.",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+            )
+
+            QrCodeImage(
+                afhaalCode = pickupCode,
+            )
+
+            Text(
+                text = "De medewerker scant deze code om je bestelling te controleren.",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
+private fun PickedUpCard() {
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer,
+        ),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                text = "Je bestelling is afgehaald.",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
+            )
+
+            Text(
+                text = "Bedankt voor je bestelling!",
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
+            )
+        }
+    }
+}
+
+@Composable
 private fun InfoCard(
     order: CustomerOrderDetail,
 ) {
@@ -297,13 +454,19 @@ private fun InfoCard(
                 text = if (order.pickupLocation.address.isBlank()) {
                     order.pickupLocation.name
                 } else {
-                    stringResource(R.string.address_value, order.pickupLocation.address)
+                    stringResource(
+                        R.string.address_value,
+                        order.pickupLocation.address,
+                    )
                 },
             )
 
             InfoRow(
                 icon = Icons.Filled.Info,
-                text = stringResource(R.string.status_value, order.status),
+                text = stringResource(
+                    R.string.status_value,
+                    order.status,
+                ),
             )
 
             InfoRow(
@@ -319,7 +482,9 @@ private fun InfoCard(
 }
 
 @Composable
-private fun OrderLine(item: CustomerOrderLine) {
+private fun OrderLine(
+    item: CustomerOrderLine,
+) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.Top,
@@ -329,7 +494,11 @@ private fun OrderLine(item: CustomerOrderLine) {
             verticalArrangement = Arrangement.spacedBy(3.dp),
         ) {
             Text(
-                text = stringResource(R.string.quantity_name, item.quantity, item.name),
+                text = stringResource(
+                    R.string.quantity_name,
+                    item.quantity,
+                    item.name,
+                ),
                 fontWeight = FontWeight.SemiBold,
             )
 
@@ -346,7 +515,10 @@ private fun OrderLine(item: CustomerOrderLine) {
 
             if (!item.note.isNullOrBlank()) {
                 Text(
-                    text = stringResource(R.string.note_value, item.note),
+                    text = stringResource(
+                        R.string.note_value,
+                        item.note,
+                    ),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
@@ -360,7 +532,11 @@ private fun OrderLine(item: CustomerOrderLine) {
 }
 
 @Composable
-private fun PickupCodeCard(pickupCode: String) {
+private fun PickupCodeCard(
+    pickupCode: String,
+    canShowPickupCode: Boolean,
+    onShowPickupCode: () -> Unit,
+) {
     Card(
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.primaryContainer,
@@ -370,23 +546,35 @@ private fun PickupCodeCard(pickupCode: String) {
         Column(
             modifier = Modifier.padding(18.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(
-                text = stringResource(R.string.pickup_code),
+                text = "Afhaalcode",
                 color = MaterialTheme.colorScheme.onPrimaryContainer,
             )
 
-            Text(
-                text = pickupCode,
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onPrimaryContainer,
-            )
+            if (canShowPickupCode) {
+                Text(
+                    text = "Je bestelling staat klaar.",
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    fontWeight = FontWeight.SemiBold,
+                )
 
-            Text(
-                text = stringResource(R.string.show_code_at_pickup),
-                color = MaterialTheme.colorScheme.onPrimaryContainer,
-            )
+                Button(
+                    onClick = onShowPickupCode,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(
+                        text = "TOON AFHAALCODE",
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
+            } else {
+                Text(
+                    text = "De afhaalcode wordt beschikbaar wanneer je bestelling klaar is.",
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                )
+            }
         }
     }
 }
@@ -426,5 +614,6 @@ private fun CustomerOrderLine.lineTotal(): BigDecimal {
     val extras = ingredients.fold(BigDecimal.ZERO) { total, ingredient ->
         total + ingredient.extraPrice
     }
+
     return (unitPrice + extras).multiply(BigDecimal(quantity))
 }

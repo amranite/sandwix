@@ -63,8 +63,8 @@ private val employeeStatuses = listOf(
     "Nieuw",
     "In bereiding",
     "Klaar",
-    "Afgehaald",
-    "Geannuleerd",
+    //"Afgehaald",
+    //"Geannuleerd",
 )
 
 @Composable

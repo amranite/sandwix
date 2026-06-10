@@ -2,6 +2,9 @@ package be.corentinvanhaeren.sandwix.network
 
 import android.content.Context
 import be.corentinvanhaeren.sandwix.data.TokenStore
+import be.corentinvanhaeren.sandwix.model.AfhaalCodeRequest
+import be.corentinvanhaeren.sandwix.model.AfhalenRequest
+import be.corentinvanhaeren.sandwix.model.AfhalenResponse
 import be.corentinvanhaeren.sandwix.model.BestellingAanmakenResponse
 import be.corentinvanhaeren.sandwix.model.BestellingDetailsResponse
 import be.corentinvanhaeren.sandwix.model.BestellingenGebruikerResponse
@@ -29,6 +32,8 @@ import retrofit2.http.Path
 import be.corentinvanhaeren.sandwix.model.BestellingStatusUpdateRequest
 import be.corentinvanhaeren.sandwix.model.BestellingStatusUpdateResponse
 import retrofit2.http.PUT
+import retrofit2.http.Query
+
 private const val baseUrl = "https://corentinvanhaeren.be/project/api/"
 
 val SandwixJson = Json {
@@ -109,6 +114,17 @@ interface SandwixApiService {
         @Path("bestelling_id") bestellingId: Int,
         @Body request: BestellingStatusUpdateRequest
     ): BestellingStatusUpdateResponse
+
+    @POST("bestellingen/scan")
+    suspend fun scanAfhaalCode(
+        @Body request: AfhaalCodeRequest
+    ): BestellingDetailsResponse
+
+    @POST("bestellingen")
+    suspend fun markeerBestellingAfgehaald(
+        @Query("afhalen") afhalen: String = "true",
+        @Body request: AfhalenRequest
+    ): AfhalenResponse
 }
 
 
